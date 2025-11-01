@@ -197,11 +197,17 @@ const BeybladeTeamBuilder = () => {
 
   // Memoized calculations for performance
   const allParts = useMemo(() => {
+    if (!beybladeData || !beybladeData.completeSets) {
+      return { blades: [], ratchets: [], bits: [] };
+    }
+
     const parts = { blades: new Set(), ratchets: new Set(), bits: new Set() };
     beybladeData.completeSets.forEach(set => {
-      parts.blades.add(set.blade);
-      parts.ratchets.add(set.ratchet);
-      parts.bits.add(set.bit);
+      if (set && set.blade && set.ratchet && set.bit) {
+        parts.blades.add(set.blade);
+        parts.ratchets.add(set.ratchet);
+        parts.bits.add(set.bit);
+      }
     });
     return {
       blades: Array.from(parts.blades),
@@ -211,21 +217,24 @@ const BeybladeTeamBuilder = () => {
   }, [beybladeData]);
 
   const usedParts = useMemo(() => {
+    if (!team || !Array.isArray(team)) {
+      return { blades: new Set(), ratchets: new Set(), bits: new Set() };
+    }
+
     const used = { blades: new Set(), ratchets: new Set(), bits: new Set() };
     team.forEach(beyblade => {
-      if (beyblade.blade) used.blades.add(beyblade.blade);
-      if (beyblade.ratchet) used.ratchets.add(beyblade.ratchet);
-      if (beyblade.bit) used.bits.add(beyblade.bit);
+      if (beyblade && beyblade.blade) used.blades.add(beyblade.blade);
+      if (beyblade && beyblade.ratchet) used.ratchets.add(beyblade.ratchet);
+      if (beyblade && beyblade.bit) used.bits.add(beyblade.bit);
     });
     return used;
   }, [team]);
 
   // Shopping List Algorithm - ottimizzato per set completi
   const shoppingList = useMemo(() => {
-    if (mode === 'single' || !team.every(b => b.beybladeId)) return [];
+    if (!team || !Array.isArray(team) || mode === 'single' || !team.every(b => b && b.beybladeId)) return [];
 
-    const requiredBeyblades = team.filter(b => b.beybladeId);
-    const products = beybladeData.completeSets;
+    const requiredBeyblades = team.filter(b => b && b.beybladeId);
 
     // Per i set, l'algoritmo è più semplice: prendiamo ogni Beyblade richiesto
     return requiredBeyblades.map(beyblade => ({
@@ -234,13 +243,14 @@ const BeybladeTeamBuilder = () => {
       quantity: 1,
       total: beyblade.price
     }));
-  }, [mode, team, beybladeData]);
+  }, [mode, team]);
 
   const totalPrice = useMemo(() => {
-    if (!shoppingList.length) return '0-0€';
+    if (!shoppingList || !shoppingList.length) return '0-0€';
 
     // Per semplicità, calcoliamo il prezzo medio
     const prices = shoppingList.map(item => {
+      if (!item || !item.total) return { min: 0, max: 0 };
       const match = item.total.match(/(\d+)-(\d+)€/);
       if (match) {
         const min = parseInt(match[1]);
