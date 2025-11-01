@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AlertCircle, Check, ShoppingCart, Trash2, Package, Save, BookOpen, Upload, X, Info, Heart, Code, Shield } from 'lucide-react';
+import { AlertCircle, Check, ShoppingCart, Trash2, Package, Save, BookOpen, Upload, X, Info, Heart, Code, Shield, Settings, Plus, Edit3, Database } from 'lucide-react';
 
 const BeybladeTeamBuilder = () => {
   const [mode, setMode] = useState(null);
@@ -9,13 +9,8 @@ const BeybladeTeamBuilder = () => {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
-  const [team, setTeam] = useState([
-    { blade: '', ratchet: '', bit: '' },
-    { blade: '', ratchet: '', bit: '' },
-    { blade: '', ratchet: '', bit: '' }
-  ]);
-
-  const beybladeData = {
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [beybladeData, setBeybladeData] = useState({
     blades: [
       'Sword Dran', 'Dran Sword', 'Buster Dran', 'Dagger Dran',
       'Soar Phoenix',
@@ -35,7 +30,12 @@ const BeybladeTeamBuilder = () => {
       'A', 'B', 'D', 'DB', 'F', 'GB', 'GF', 'GP', 'GR', 'H', 'HN', 'HT',
       'K', 'LF', 'MN', 'N', 'P', 'Q', 'R', 'T', 'W'
     ].sort()
-  };
+  });
+  const [team, setTeam] = useState([
+    { blade: '', ratchet: '', bit: '' },
+    { blade: '', ratchet: '', bit: '' },
+    { blade: '', ratchet: '', bit: '' }
+  ]);
 
   const products = [
     { name: 'Wizard Rod 5-70DB (UX Booster)', blade: 'Wizard Rod', ratchet: '5-70', bit: 'DB', price: '25-30€', tier: 'S+', format: 'UX Booster', setName: null },
@@ -71,12 +71,35 @@ const BeybladeTeamBuilder = () => {
     { name: 'Sting Unicorn 4-60P', blade: 'Sting Unicorn', ratchet: '4-60', bit: 'P', price: '15-20€', tier: 'A', format: 'Vari formati', setName: null }
   ];
 
-  // Carica i build salvati all'avvio
+  // Carica i build salvati e dati custom all'avvio
   useEffect(() => {
     loadSavedBuilds();
+    loadCustomBeybladeData();
   }, []);
 
   // Funzioni per il database con localStorage
+  const loadCustomBeybladeData = () => {
+    try {
+      const customData = localStorage.getItem('beybladeCustomData');
+      if (customData) {
+        const parsed = JSON.parse(customData);
+        setBeybladeData(parsed);
+        console.log('✅ Dati custom Beyblade caricati:', parsed);
+      }
+    } catch (error) {
+      console.log('Nessun dato custom trovato, uso database di default');
+    }
+  };
+
+  const saveCustomBeybladeData = (newData) => {
+    try {
+      localStorage.setItem('beybladeCustomData', JSON.stringify(newData));
+      setBeybladeData(newData);
+    } catch (error) {
+      console.error('Errore nel salvataggio dati custom:', error);
+    }
+  };
+
   const loadSavedBuilds = () => {
     try {
       setIsLoading(true);
@@ -481,6 +504,393 @@ const BeybladeTeamBuilder = () => {
           </div>
         )}
 
+        {/* Admin Panel */}
+        {showAdmin && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-orange-500 to-red-500">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Database size={28} />
+                  🛠️ Gestione Database Beyblade
+                </h2>
+                <button
+                  onClick={() => setShowAdmin(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="text-white" size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Blades Management */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border-2 border-blue-200">
+                    <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">🗡️</span> Blades
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nome Blade..."
+                          className="flex-1 p-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = e.target.value.trim();
+                              if (value && !beybladeData.blades.includes(value)) {
+                                const newData = {
+                                  ...beybladeData,
+                                  blades: [...beybladeData.blades, value].sort()
+                                };
+                                saveCustomBeybladeData(newData);
+                                e.target.value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const input = document.querySelector('input[placeholder="Nome Blade..."]');
+                            const value = input?.value.trim();
+                            if (value && !beybladeData.blades.includes(value)) {
+                              const newData = {
+                                ...beybladeData,
+                                blades: [...beybladeData.blades, value].sort()
+                              };
+                              saveCustomBeybladeData(newData);
+                              input.value = '';
+                            }
+                          }}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {beybladeData.blades.map((blade, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-blue-200">
+                            <span className="text-sm font-medium text-gray-800">{blade}</span>
+                            <button
+                              onClick={() => {
+                                const newData = {
+                                  ...beybladeData,
+                                  blades: beybladeData.blades.filter(b => b !== blade)
+                                };
+                                saveCustomBeybladeData(newData);
+                              }}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ratchets Management */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-200">
+                    <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">⚙️</span> Ratchets
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Es: 3-60"
+                          className="flex-1 p-2 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = e.target.value.trim();
+                              if (value && !beybladeData.ratchets.includes(value)) {
+                                const newData = {
+                                  ...beybladeData,
+                                  ratchets: [...beybladeData.ratchets, value].sort()
+                                };
+                                saveCustomBeybladeData(newData);
+                                e.target.value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const input = document.querySelector('input[placeholder="Es: 3-60"]');
+                            const value = input?.value.trim();
+                            if (value && !beybladeData.ratchets.includes(value)) {
+                              const newData = {
+                                ...beybladeData,
+                                ratchets: [...beybladeData.ratchets, value].sort()
+                              };
+                              saveCustomBeybladeData(newData);
+                              input.value = '';
+                            }
+                          }}
+                          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {beybladeData.ratchets.map((ratchet, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-green-200">
+                            <span className="text-sm font-medium text-gray-800">{ratchet}</span>
+                            <button
+                              onClick={() => {
+                                const newData = {
+                                  ...beybladeData,
+                                  ratchets: beybladeData.ratchets.filter(r => r !== ratchet)
+                                };
+                                saveCustomBeybladeData(newData);
+                              }}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bits Management */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border-2 border-purple-200">
+                    <h3 className="text-xl font-bold text-purple-900 mb-4 flex items-center gap-2">
+                      <span className="text-2xl">🎯</span> Bits
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Es: N, DB, etc."
+                          className="flex-1 p-2 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          maxLength={3}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = e.target.value.trim().toUpperCase();
+                              if (value && !beybladeData.bits.includes(value)) {
+                                const newData = {
+                                  ...beybladeData,
+                                  bits: [...beybladeData.bits, value].sort()
+                                };
+                                saveCustomBeybladeData(newData);
+                                e.target.value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const input = document.querySelector('input[placeholder="Es: N, DB, etc."]');
+                            const value = input?.value.trim().toUpperCase();
+                            if (value && !beybladeData.bits.includes(value)) {
+                              const newData = {
+                                ...beybladeData,
+                                bits: [...beybladeData.bits, value].sort()
+                              };
+                              saveCustomBeybladeData(newData);
+                              input.value = '';
+                            }
+                          }}
+                          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {beybladeData.bits.map((bit, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-purple-200">
+                            <span className="text-sm font-medium text-gray-800">{bit}</span>
+                            <button
+                              onClick={() => {
+                                const newData = {
+                                  ...beybladeData,
+                                  bits: beybladeData.bits.filter(b => b !== bit)
+                                };
+                                saveCustomBeybladeData(newData);
+                              }}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reset to Default */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border-2 border-red-300">
+                  <h4 className="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
+                    <Shield size={20} />
+                    Reset Database
+                  </h4>
+                  <p className="text-sm text-gray-700 mb-3">
+                    Attenzione: questa operazione ripristinerà il database ai valori originali, cancellando tutte le modifiche personalizzate.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (confirm('⚠️ Sei sicuro di voler resettare il database ai valori di default? Tutte le modifiche personalizzate saranno perse!')) {
+                        // Rimuovi i dati custom dal localStorage
+                        localStorage.removeItem('beybladeCustomData');
+
+                        // Reset al database di default
+                        const defaultData = {
+                          blades: [
+                            'Sword Dran', 'Dran Sword', 'Buster Dran', 'Dagger Dran',
+                            'Soar Phoenix',
+                            'Chain Scythe', 'Hells Scythe', 'Chain Fire', 'Reaper Fire T',
+                            'Wizard Rod', 'Wand Wizard', 'Wizard Arrow',
+                            'Shark Edge',
+                            'Knife Shinobi', 'Shadow Shinobi',
+                            'Knight Shield', 'Sting Unicorn', 'Tusk Mammoth', 'Beat Tyranno',
+                            'Tackle Goat', 'Gale Wyvern', 'Circle Ghost', 'Obsidian Shell',
+                            'Shelter Drake', 'Dark Perseus B', 'Fox Blush J'
+                          ].sort(),
+                          ratchets: [
+                            '0-80', '1-60', '1-80', '2-70', '3-60', '3-80', '4-60', '4-70', '4-80',
+                            '5-60', '5-70', '5-80', '6-80', '7-80', '9-60', '9-70'
+                          ],
+                          bits: [
+                            'A', 'B', 'D', 'DB', 'F', 'GB', 'GF', 'GP', 'GR', 'H', 'HN', 'HT',
+                            'K', 'LF', 'MN', 'N', 'P', 'Q', 'R', 'T', 'W'
+                          ].sort()
+                        };
+
+                        setBeybladeData(defaultData);
+                        alert('✅ Database resettato ai valori di default!');
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+                  >
+                    🔄 Reset ai Valori Default
+                  </button>
+                </div>
+
+                {/* Batch Operations */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border-2 border-yellow-300">
+                  <h4 className="text-lg font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                    <Edit3 size={20} />
+                    Operazioni Batch
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-700 mb-2">Importa da testo (uno per riga):</p>
+                      <textarea
+                        placeholder="Blade 1&#10;Blade 2&#10;Blade 3"
+                        className="w-full p-3 border-2 border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                        rows={3}
+                        id="batchImport"
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => {
+                            const textarea = document.getElementById('batchImport');
+                            const lines = textarea.value.split('\n')
+                              .map(line => line.trim())
+                              .filter(line => line.length > 0);
+
+                            const uniqueNewBlades = lines.filter(line =>
+                              !beybladeData.blades.includes(line)
+                            );
+
+                            if (uniqueNewBlades.length > 0) {
+                              const newData = {
+                                ...beybladeData,
+                                blades: [...beybladeData.blades, ...uniqueNewBlades].sort()
+                              };
+                              saveCustomBeybladeData(newData);
+                              textarea.value = '';
+                              alert(`✅ Aggiunti ${uniqueNewBlades.length} nuovi Blades!`);
+                            } else {
+                              alert('ℹ️ Nessun nuovo Blade da aggiungere');
+                            }
+                          }}
+                          className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+                        >
+                          Importa Blades
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-gray-700 mb-2">Backup e Ripristino:</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            const dataStr = JSON.stringify(beybladeData, null, 2);
+                            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                            const url = URL.createObjectURL(dataBlob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = 'beyblade-database-backup.json';
+                            link.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                        >
+                          💾 Backup Database
+                        </button>
+                        <input
+                          type="file"
+                          accept=".json"
+                          id="restoreFile"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                try {
+                                  const data = JSON.parse(event.target.result);
+                                  setBeybladeData(data);
+                                  alert('✅ Database ripristinato con successo!');
+                                } catch (error) {
+                                  alert('❌ Errore nel file di backup!');
+                                }
+                              };
+                              reader.readAsText(file);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => document.getElementById('restoreFile').click()}
+                          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                        >
+                          📂 Ripristina Backup
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Statistics */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-300">
+                  <h4 className="text-lg font-bold text-gray-800 mb-3">📊 Statistiche Database</h4>
+                  <div className="grid md:grid-cols-3 gap-4 text-center">
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-2xl font-bold text-blue-600">{beybladeData.blades.length}</div>
+                      <div className="text-sm text-gray-600">Blades Totali</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-2xl font-bold text-green-600">{beybladeData.ratchets.length}</div>
+                      <div className="text-sm text-gray-600">Ratchets Totali</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-2xl font-bold text-purple-600">{beybladeData.bits.length}</div>
+                      <div className="text-sm text-gray-600">Bits Totali</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu Iniziale */}
         {mode === null && (
           <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-8">
@@ -535,13 +945,21 @@ const BeybladeTeamBuilder = () => {
               </button>
             </div>
 
-            <div className="mt-8 flex justify-center gap-4">
+            <div className="mt-8 flex justify-center gap-4 flex-wrap">
               <button
                 onClick={() => setShowAbout(true)}
                 className="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
               >
                 <Info size={20} />
                 Informazioni
+              </button>
+
+              <button
+                onClick={() => setShowAdmin(true)}
+                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+              >
+                <Settings size={20} />
+                ⚙️ Gestione Database
               </button>
             </div>
 
