@@ -5,6 +5,8 @@ const BeybladeTeamBuilder = () => {
   const [mode, setMode] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showDatabase, setShowDatabase] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [savedBuilds, setSavedBuilds] = useState([]);
   const [saveName, setSaveName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -148,6 +150,84 @@ const BeybladeTeamBuilder = () => {
     setShowLibrary(false);
   };
 
+  // Funzioni per gestire i prodotti personalizzati
+  const addCustomProduct = () => {
+    if (!newProduct.name || !newProduct.blade || !newProduct.ratchet || !newProduct.bit) {
+      alert('⚠️ Compila tutti i campi del prodotto prima di aggiungerlo!');
+      return;
+    }
+
+    const product = {
+      ...newProduct,
+      format: 'Personalizzato',
+      setName: null,
+      provides: []
+    };
+
+    setCustomProducts([...customProducts, product]);
+
+    // Reset form
+    setNewProduct({
+      name: '',
+      blade: '',
+      ratchet: '',
+      bit: '',
+      price: '',
+      tier: 'A'
+    });
+
+    // Salva nel localStorage
+    try {
+      localStorage.setItem('customProducts', JSON.stringify([...customProducts, product]));
+      alert('✅ Prodotto aggiunto con successo!');
+    } catch (error) {
+      console.error('Errore nel salvataggio:', error);
+      alert('❌ Errore nel salvataggio del prodotto');
+    }
+  };
+
+  const removeCustomProduct = (index) => {
+    if (confirm('Sei sicuro di voler eliminare questo prodotto personalizzato?')) {
+      const updatedProducts = customProducts.filter((_, idx) => idx !== index);
+      setCustomProducts(updatedProducts);
+
+      // Aggiorna localStorage
+      try {
+        localStorage.setItem('customProducts', JSON.stringify(updatedProducts));
+        alert('✅ Prodotto eliminato!');
+      } catch (error) {
+        console.error('Errore nell\'eliminazione:', error);
+        alert('❌ Errore nell\'eliminazione del prodotto');
+      }
+    }
+  };
+
+  // Carica i prodotti personalizzati all'avvio
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('customProducts');
+      if (saved) {
+        setCustomProducts(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.log('Nessun prodotto personalizzato salvato');
+      setCustomProducts([]);
+    }
+  }, []);
+
+  // Dati combinati che includono quelli personalizzati
+  const combinedData = useMemo(() => {
+    const customBlades = [...new Set(customProducts.map(p => p.blade).filter(Boolean))];
+    const customRatchets = [...new Set(customProducts.map(p => p.ratchet).filter(Boolean))];
+    const customBits = [...new Set(customProducts.map(p => p.bit).filter(Boolean))];
+
+    return {
+      blades: [...new Set([...beybladeData.blades, ...customBlades])].sort(),
+      ratchets: [...new Set([...beybladeData.ratchets, ...customRatchets])].sort(),
+      bits: [...new Set([...beybladeData.bits, ...customBits])].sort()
+    };
+  }, [customProducts]);
+
   const usedParts = useMemo(() => {
     const used = { blades: new Set(), ratchets: new Set(), bits: new Set() };
     team.forEach(bey => {
@@ -225,7 +305,7 @@ const BeybladeTeamBuilder = () => {
       let bestProduct = null;
       let bestScore = -1;
 
-      for (const product of products) {
+      for (const product of [...products, ...customProducts]) {
         let score = 0;
         const wouldCoverBlades = needed.blades.has(product.blade) && !covered.blades.has(product.blade);
         const wouldCoverRatchets = needed.ratchets.has(product.ratchet) && !covered.ratchets.has(product.ratchet);
@@ -357,6 +437,187 @@ const BeybladeTeamBuilder = () => {
           </div>
         )}
 
+        {/* Gestione Database */}
+        {showDatabase && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-500">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Package size={28} />
+                  🗃️ Gestione Database Prodotti
+                </h2>
+                <button
+                  onClick={() => setShowDatabase(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="text-white" size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Form Aggiungi Prodotto */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border-2 border-green-300">
+                    <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
+                      ➕ Aggiungi Nuovo Prodotto
+                    </h3>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">🗡️ Blade (Nome principale)</label>
+                        <input
+                          type="text"
+                          value={newProduct.blade}
+                          onChange={(e) => {
+                            const bladeName = e.target.value;
+                            setNewProduct({
+                              ...newProduct,
+                              blade: bladeName,
+                              name: bladeName ? `${bladeName} (Prodotto Personalizzato)` : ''
+                            });
+                          }}
+                          placeholder="es: Lightning Dragoon, Phoenix Nova, Storm Tiger..."
+                          className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">💡 Il nome della blade diventerà automaticamente il nome del prodotto</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">📦 Nome Prodotto (Auto-generato)</label>
+                        <input
+                          type="text"
+                          value={newProduct.name}
+                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          placeholder="Viene generato automaticamente dal nome blade"
+                          className="w-full p-2 border-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">🔄 Puoi modificare manualmente se necessario</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">⚙️ Ratchet</label>
+                          <input
+                            type="text"
+                            value={newProduct.ratchet}
+                            onChange={(e) => setNewProduct({...newProduct, ratchet: e.target.value})}
+                            placeholder="es: 5-70, 3-80, 9-60..."
+                            className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">🎯 Bit</label>
+                          <input
+                            type="text"
+                            value={newProduct.bit}
+                            onChange={(e) => setNewProduct({...newProduct, bit: e.target.value})}
+                            placeholder="es: DB, GF, A, B..."
+                            className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">💰 Prezzo</label>
+                          <input
+                            type="text"
+                            value={newProduct.price}
+                            onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                            placeholder="es: 25-30€"
+                            className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">⭐ Tier</label>
+                          <select
+                            value={newProduct.tier}
+                            onChange={(e) => setNewProduct({...newProduct, tier: e.target.value})}
+                            className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          >
+                            <option value="S+">S+</option>
+                            <option value="S">S</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={addCustomProduct}
+                        disabled={!newProduct.name || !newProduct.blade || !newProduct.ratchet || !newProduct.bit}
+                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        ➕ Aggiungi Prodotto
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista Prodotti Personalizzati */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border-2 border-blue-300">
+                    <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2">
+                      📋 Prodotti Personalizzati ({customProducts.length})
+                    </h3>
+
+                    {customProducts.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Package className="mx-auto mb-3 text-gray-400" size={48} />
+                        <p className="text-gray-600">Nessun prodotto personalizzato ancora</p>
+                        <p className="text-gray-500 text-sm mt-2">Aggiungi nuovi prodotti per espandere il database!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {customProducts.map((product, idx) => (
+                          <div key={idx} className="bg-white rounded-lg p-4 border border-blue-200">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <h4 className="font-bold text-gray-800">{product.name}</h4>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                                  <span className={`font-bold ${getTierColor(product.tier)}`}>
+                                    Tier {product.tier}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{product.price}</span>
+                                </div>
+                                <div className="text-sm text-gray-700 mt-2">
+                                  <span className="text-indigo-700 font-semibold">{product.blade}</span>
+                                  <span className="text-gray-600"> {product.ratchet}</span>
+                                  <span className="text-purple-600"> {product.bit}</span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => removeCustomProduct(idx)}
+                                className="ml-2 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="text-yellow-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="text-sm">
+                      <p className="font-bold text-yellow-800 mb-1">💡 INFORMAZIONI:</p>
+                      <p className="text-yellow-700">
+                        I prodotti personalizzati verranno salvati nel tuo browser e inclusi nel carrello quando cerchi i pezzi per i tuoi Beyblade.
+                        Questi prodotti sono visibili solo a te su questo dispositivo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dialog Salvataggio */}
         {showSaveDialog && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -435,13 +696,20 @@ const BeybladeTeamBuilder = () => {
               </button>
             </div>
 
-            <div className="mt-8 flex justify-center">
+            <div className="mt-8 flex justify-center gap-4">
               <button
                 onClick={() => setShowLibrary(true)}
                 className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
               >
                 <BookOpen size={24} />
                 📚 I Miei Build ({savedBuilds.length})
+              </button>
+              <button
+                onClick={() => setShowDatabase(true)}
+                className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
+              >
+                <Package size={24} />
+                🗃️ Gestione Database
               </button>
             </div>
 
@@ -512,11 +780,12 @@ const BeybladeTeamBuilder = () => {
                       className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Seleziona Blade</option>
-                      {beybladeData.blades.map(blade => {
+                      {combinedData.blades.map(blade => {
                         const used = mode === 'team' && isPartUsed('blade', blade, index, 'blade');
+                        const isCustom = customProducts.some(p => p.blade === blade);
                         return (
                           <option key={blade} value={blade} disabled={used}>
-                            {blade} {used ? '❌ (Già usata)' : ''}
+                            {blade} {isCustom ? '🎨' : ''} {used ? '❌ (Già usata)' : ''}
                           </option>
                         );
                       })}
@@ -535,11 +804,12 @@ const BeybladeTeamBuilder = () => {
                       className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Seleziona Ratchet</option>
-                      {beybladeData.ratchets.map(ratchet => {
+                      {combinedData.ratchets.map(ratchet => {
                         const used = mode === 'team' && isPartUsed('ratchet', ratchet, index, 'ratchet');
+                        const isCustom = customProducts.some(p => p.ratchet === ratchet);
                         return (
                           <option key={ratchet} value={ratchet} disabled={used}>
-                            {ratchet} {used ? '❌ (Già usato)' : ''}
+                            {ratchet} {isCustom ? '🎨' : ''} {used ? '❌ (Già usato)' : ''}
                           </option>
                         );
                       })}
@@ -558,11 +828,12 @@ const BeybladeTeamBuilder = () => {
                       className="w-full p-2 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Seleziona Bit</option>
-                      {beybladeData.bits.map(bit => {
+                      {combinedData.bits.map(bit => {
                         const used = mode === 'team' && isPartUsed('bit', bit, index, 'bit');
+                        const isCustom = customProducts.some(p => p.bit === bit);
                         return (
                           <option key={bit} value={bit} disabled={used}>
-                            {bit} {used ? '❌ (Già usato)' : ''}
+                            {bit} {isCustom ? '🎨' : ''} {used ? '❌ (Già usato)' : ''}
                           </option>
                         );
                       })}
@@ -598,13 +869,13 @@ const BeybladeTeamBuilder = () => {
                 <Trash2 size={18} />
                 Reset
               </button>
-              {isTeamComplete && saveName.trim() && (
+              {isTeamComplete && (
                 <button
-                  onClick={saveBuild}
+                  onClick={() => setShowSaveDialog(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-bold ml-auto animate-pulse"
                 >
                   <Save size={18} />
-                  💾 Salva "{saveName.trim()}"
+                  💾 Salva Build
                 </button>
               )}
             </div>
@@ -652,9 +923,14 @@ const BeybladeTeamBuilder = () => {
                           </div>
                         </div>
                         <div className="text-right ml-4">
-                          <span className={`text-sm font-bold ${getTierColor(product.tier)}`}>
+                          {product.format === 'Personalizzato' && (
+                            <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded font-semibold mb-1">
+                              🎨 Personalizzato
+                            </span>
+                          )}
+                          <div className={`text-sm font-bold ${getTierColor(product.tier)}`}>
                             Tier {product.tier}
-                          </span>
+                          </div>
                           <p className="text-lg font-bold text-green-600">{product.price}</p>
                         </div>
                       </div>
@@ -686,6 +962,121 @@ const BeybladeTeamBuilder = () => {
         {mode !== null && (
           <div className="text-center text-white/80 text-sm">
             <p>Database aggiornato a Novembre 2025 | Regole tornei WBO e B4</p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-white/60 text-xs px-4 pb-4">
+          <p className="flex flex-wrap items-center justify-center gap-2">
+            <span>© 2025 Beyblade X Team Builder</span>
+            <span>•</span>
+            <span>Tutti i diritti riservati</span>
+            <span>•</span>
+            <span>Creato con ❤️ da Francesco Ronca</span>
+            <button
+              onClick={() => setShowInfo(true)}
+              className="underline hover:text-white/80 transition-colors ml-1"
+            >
+              ℹ️
+            </button>
+          </p>
+        </div>
+
+        {/* Modal Informazioni */}
+        {showInfo && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-blue-500 to-purple-500">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  ℹ️ Informazioni su Beyblade X Team Builder
+                </h2>
+                <button
+                  onClick={() => setShowInfo(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="text-white" size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Intestazione */}
+                <div className="text-center">
+                  <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">
+                    🎮 Beyblade X Team Builder
+                  </h3>
+                  <p className="text-gray-600">Versione 1.0.0</p>
+                </div>
+
+                {/* Sviluppo e Copyright */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border-2 border-blue-300">
+                  <h4 className="font-bold text-blue-900 mb-3 text-lg">👨‍💻 Sviluppo e Copyright</h4>
+                  <p className="text-gray-700 mb-2">
+                    <strong>Creato con:</strong> ❤️ da Francesco Ronca
+                  </p>
+                  <p className="text-gray-700 mb-2">
+                    <strong>Anno:</strong> 2025
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Licenza:</strong> Tutti i diritti riservati
+                  </p>
+                </div>
+
+                {/* Tecnologie */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-300">
+                  <h4 className="font-bold text-green-900 mb-3 text-lg">⚙️ Tecnologie</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">React 18</span>
+                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">Vite</span>
+                    <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">Tailwind CSS</span>
+                    <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">Lucide Icons</span>
+                  </div>
+                </div>
+
+                {/* Disclaimer e Informazioni */}
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 border-2 border-yellow-300">
+                  <h4 className="font-bold text-yellow-900 mb-3 text-lg">⚠️ Disclaimer e Informazioni</h4>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <p>
+                      <strong>Beyblade X™</strong> è un marchio registrato di Takara Tomy.
+                      Questa applicazione è un progetto <strong>non ufficiale</strong> creato da fan per fan.
+                    </p>
+                    <p>
+                      I dati sui prodotti e i prezzi sono <strong>puramente indicativi</strong> e basati su informazioni disponibili al Novembre 2025.
+                      I prezzi possono variare in base al rivenditore e alla disponibilità.
+                    </p>
+                    <p>
+                      Le regole dei tornei si basano sulle linee guida <strong>WBO (World Beyblade Organization)</strong> e <strong>B4</strong>,
+                      ma sono soggette a modifiche da parte degli organizzatori ufficiali.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ringraziamenti */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-300">
+                  <h4 className="font-bold text-purple-900 mb-3 text-lg">🙏 Ringraziamenti</h4>
+                  <div className="text-sm text-gray-700 space-y-2">
+                    <p>
+                      Un ringraziamento speciale a tutta la <strong>community Beyblade X</strong> per il supporto
+                      e per condividere strategie e informazioni sui tornei.
+                    </p>
+                    <p>
+                      Grazie a <strong>WBO</strong> per mantenere vive le regole competitive
+                      e a tutti i <strong>Blader</strong> che rendono questo sport così avvincente!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer Modale */}
+                <div className="text-center pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    <strong>© 2025 Francesco Ronca - Tutti i diritti riservati</strong>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Beyblade X Team Builder non è affiliato con Takara Tomy
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
