@@ -2,6 +2,7 @@
   "name": "beyblade-builder",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
