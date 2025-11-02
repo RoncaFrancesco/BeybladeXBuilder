@@ -1,6 +1,9 @@
 {
   "version": 2,
   "name": "beyblade-builder",
+  "github": {
+    "silent": true
+  },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
