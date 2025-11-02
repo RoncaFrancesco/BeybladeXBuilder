@@ -1,347 +1,110 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, TrendingDown, CheckCircle, XCircle, AlertCircle, Package, DollarSign, Zap, Target, Calculator } from 'lucide-react';
-import { CollectionManager, DatabaseUtils } from '../utils/databaseManager.js';
+import { useUnifiedDatabase } from '../hooks/useUnifiedDatabase.js';
 import { getComponentType, getTypeColor, getTypeBgColor } from '../data/beybladeTypes.js';
 
 /**
- * Algoritmo di ottimizzazione avanzato per acquisti Beyblade X
- * Analizza la collezione utente e suggerisce i prodotti migliori da acquistare
+ * Componente ottimizzatore acquisti che usa il sistema unificato Database → Collezione → Ottimizzatore
+ * Mostra prodotti suggeriti per completare un team Beyblade
  */
-
-class OptimizationEngine {
-  constructor() {
-    this.tierWeights = { 'S+': 1000, 'S': 800, 'A': 600, 'B': 400 };
-    this.coverageWeights = { blade: 100, ratchet: 10, bit: 1 };
-  }
-
-  /**
-   * Analizza i componenti necessari per un team
-   */
-  analyzeTeamNeeds(team) {
-    const needed = {
-      blades: new Set(),
-      ratchets: new Set(),
-      bits: new Set()
-    };
-
-    const componentMap = {
-      blades: new Map(),
-      ratchets: new Map(),
-      bits: new Map()
-    };
-
-    team.forEach((beyblade, index) => {
-      if (beyblade.blade) {
-        needed.blades.add(beyblade.blade);
-        componentMap.blades.set(beyblade.blade, { beybladeIndex: index, partType: 'blade' });
-      }
-      if (beyblade.ratchet) {
-        needed.ratchets.add(beyblade.ratchet);
-        componentMap.ratchets.set(beyblade.ratchet, { beybladeIndex: index, partType: 'ratchet' });
-      }
-      if (beyblade.bit) {
-        needed.bits.add(beyblade.bit);
-        componentMap.bits.set(beyblade.bit, { beybladeIndex: index, partType: 'bit' });
-      }
-    });
-
-    return { needed, componentMap };
-  }
-
-  /**
-   * Verifica quali componenti l'utente possiede già
-   */
-  async checkOwnedComponents(needed, availableProducts) {
-    const owned = {
-      blades: new Set(),
-      ratchets: new Set(),
-      bits: new Set()
-    };
-
-    const ownedProducts = await CollectionManager.getOwnedProducts();
-
-    ownedProducts.forEach(product => {
-      if (product.blade?.name && needed.blades.has(product.blade.name)) {
-        owned.blades.add(product.blade.name);
-      }
-      if (product.ratchet?.name && needed.ratchets.has(product.ratchet.name)) {
-        owned.ratchets.add(product.ratchet.name);
-      }
-      if (product.bit?.name && needed.bits.has(product.bit.name)) {
-        owned.bits.add(product.bit.name);
-      }
-    });
-
-    return owned;
-  }
-
-  /**
-   * Calcola quali componenti mancano
-   */
-  calculateMissingComponents(needed, owned) {
-    const missing = {
-      blades: [...needed.blades].filter(b => !owned.blades.has(b)),
-      ratchets: [...needed.ratchets].filter(r => !owned.ratchets.has(r)),
-      bits: [...needed.bits].filter(b => !owned.bits.has(b))
-    };
-
-    const totalNeeded = needed.blades.size + needed.ratchets.size + needed.bits.size;
-    const totalOwned = owned.blades.size + owned.ratchets.size + owned.bits.size;
-    const totalMissing = missing.blades.length + missing.ratchets.length + missing.bits.length;
-
-    return { missing, totalNeeded, totalOwned, totalMissing };
-  }
-
-  /**
-   * Calcola il punteggio di utilità di un prodotto per i componenti mancanti
-   */
-  calculateProductScore(product, missingComponents) {
-    let score = 0;
-    const provides = [];
-
-    // Controlla quali componenti mancanti fornisce il prodotto
-    if (product.blade?.name && missingComponents.blades.includes(product.blade.name)) {
-      score += this.coverageWeights.blade;
-      provides.push({ type: 'blade', name: product.blade.name });
-    }
-    if (product.ratchet?.name && missingComponents.ratchets.includes(product.ratchet.name)) {
-      score += this.coverageWeights.ratchet;
-      provides.push({ type: 'ratchet', name: product.ratchet.name });
-    }
-    if (product.bit?.name && missingComponents.bits.includes(product.bit.name)) {
-      score += this.coverageWeights.bit;
-      provides.push({ type: 'bit', name: product.bit.name });
-    }
-
-    // Bonus per tier
-    const tierBonus = this.tierWeights[product.tier] || 0;
-    score += tierBonus;
-
-    return { score, provides };
-  }
-
-  /**
-   * Ottimizza la selezione prodotti usando algoritmo greedy
-   */
-  optimizeProductSelection(missingComponents, availableProducts, maxProducts = 10) {
-    const candidates = availableProducts.map(product => {
-      const { score, provides } = this.calculateProductScore(product, missingComponents);
-      return {
-        ...product,
-        utilityScore: score,
-        provides,
-        efficiency: provides.length > 0 ? score / provides.length : 0
-      };
-    }).filter(p => p.utilityScore > 0);
-
-    // Ordina per punteggio di utilità (decrescente)
-    candidates.sort((a, b) => {
-      if (a.utilityScore !== b.utilityScore) {
-        return b.utilityScore - a.utilityScore;
-      }
-      // Se punteggio uguale, preferisci più componenti forniti
-      if (b.provides.length !== a.provides.length) {
-        return b.provides.length - a.provides.length;
-      }
-      // Se ancora uguale, preferisci prezzo più basso
-      const priceA = this.parsePriceRange(a.price);
-      const priceB = this.parsePriceRange(b.price);
-      return priceA - priceB;
-    });
-
-    // Algoritmo greedy per selezionare prodotti
-    const selected = [];
-    const covered = {
-      blades: new Set(),
-      ratchets: new Set(),
-      bits: new Set()
-    };
-
-    for (const product of candidates) {
-      if (selected.length >= maxProducts) break;
-
-      // Controlla se il prodotto fornisce componenti mancanti
-      const providesNewComponents = product.provides.some(provide => {
-        switch (provide.type) {
-          case 'blade': return !covered.blades.has(provide.name);
-          case 'ratchet': return !covered.ratchets.has(provide.name);
-          case 'bit': return !covered.bits.has(provide.name);
-          default: return false;
-        }
-      });
-
-      if (providesNewComponents) {
-        selected.push(product);
-        product.provides.forEach(provide => {
-          switch (provide.type) {
-            case 'blade': covered.blades.add(provide.name); break;
-            case 'ratchet': covered.ratchets.add(provide.name); break;
-            case 'bit': covered.bits.add(provide.name); break;
-          }
-        });
-      }
-    }
-
-    return selected;
-  }
-
-  /**
-   * Calcola alternative con diverso rapporto qualità/prezzo
-   */
-  calculateAlternatives(missingComponents, availableProducts, optimalSolution) {
-    const alternatives = [];
-
-    // Alternativa Budget (solo tier B e A)
-    const budgetProducts = availableProducts.filter(p => ['A', 'B'].includes(p.tier));
-    const budgetSolution = this.optimizeProductSelection(missingComponents, budgetProducts, 15);
-
-    if (budgetSolution.length > 0 && budgetSolution !== optimalSolution) {
-      alternatives.push({
-        name: 'Soluzione Budget',
-        description: 'Prodotti più economici (Tier A-B)',
-        products: budgetSolution,
-        estimatedCost: this.calculateTotalCost(budgetSolution),
-        productsCount: budgetSolution.length
-      });
-    }
-
-    // Alternativa Premium (solo tier S+ e S)
-    const premiumProducts = availableProducts.filter(p => ['S+', 'S'].includes(p.tier));
-    const premiumSolution = this.optimizeProductSelection(missingComponents, premiumProducts, 10);
-
-    if (premiumSolution.length > 0 && premiumSolution !== optimalSolution) {
-      alternatives.push({
-        name: 'Soluzione Premium',
-        description: 'Solo prodotti di alta qualità (Tier S+ - S)',
-        products: premiumSolution,
-        estimatedCost: this.calculateTotalCost(premiumSolution),
-        productsCount: premiumSolution.length
-      });
-    }
-
-    return alternatives;
-  }
-
-  /**
-   * Estrae il prezzo medio da un range (es: "25-30€" -> 27.5)
-   */
-  parsePriceRange(priceRange) {
-    const matches = priceRange.match(/(\d+)-(\d+)€/);
-    if (matches) {
-      const min = parseInt(matches[1]);
-      const max = parseInt(matches[2]);
-      return (min + max) / 2;
-    }
-    return 0;
-  }
-
-  /**
-   * Calcola il costo totale stimato
-   */
-  calculateTotalCost(products) {
-    return products.reduce((total, product) => {
-      return total + this.parsePriceRange(product.price);
-    }, 0);
-  }
-
-  /**
-   * Calcola il risparmio rispetto alla soluzione più costosa
-   */
-  calculateSavings(optimalCost, alternatives) {
-    if (alternatives.length === 0) return { amount: 0, percentage: 0 };
-
-    const maxCost = Math.max(optimalCost, ...alternatives.map(a => a.estimatedCost));
-    const savings = maxCost - optimalCost;
-    const percentage = maxCost > 0 ? Math.round((savings / maxCost) * 100) : 0;
-
-    return { amount: savings, percentage, maxCost };
-  }
-}
-
 const ShoppingOptimizer = ({ team, onClose }) => {
-  const [analysis, setAnalysis] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [showAlternatives, setShowAlternatives] = useState(false);
-  const [engine] = useState(() => new OptimizationEngine());
+  const { optimization, loading, optimizing, error } = useUnifiedDatabase(team);
 
-  const runOptimization = useCallback(async () => {
-    if (!team || !team.every(b => b.blade && b.ratchet && b.bit)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // STEP 1: Analizza i componenti necessari
-      const { needed, componentMap } = engine.analyzeTeamNeeds(team);
-
-      // STEP 2: Carica prodotti disponibili
-      const availableProducts = await DatabaseUtils.getAllProducts();
-
-      // STEP 3: Verifica cosa hai già nella collezione
-      const owned = await engine.checkOwnedComponents(needed, availableProducts);
-
-      // STEP 4: Calcola cosa manca
-      const { missing, totalNeeded, totalOwned, totalMissing } = engine.calculateMissingComponents(needed, owned);
-
-      // STEP 5: Se mancano componenti, calcola ottimizzazione
-      let optimalSolution = [];
-      let alternatives = [];
-      let savings = { amount: 0, percentage: 0 };
-
-      if (totalMissing > 0) {
-        optimalSolution = engine.optimizeProductSelection(missing, availableProducts);
-        alternatives = engine.calculateAlternatives(missing, availableProducts, optimalSolution);
-
-        const optimalCost = engine.calculateTotalCost(optimalSolution);
-        savings = engine.calculateSavings(optimalCost, alternatives);
-      }
-
-      setAnalysis({
-        needed,
-        owned,
-        missing,
-        totalNeeded,
-        totalOwned,
-        totalMissing,
-        optimalSolution,
-        alternatives,
-        savings,
-        componentMap
-      });
-    } catch (error) {
-      console.error('Errore ottimizzazione:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [team, engine]);
-
-  // Esegui ottimizzazione quando cambia il team
-  React.useEffect(() => {
-    runOptimization();
-  }, [runOptimization]);
-
-  // Get tier color
-  const getTierColor = (tier) => {
-    const colors = {
-      'S+': 'text-red-600 font-bold bg-red-50 border-red-200',
-      'S': 'text-orange-600 font-bold bg-orange-50 border-orange-200',
-      'A': 'text-yellow-600 font-semibold bg-yellow-50 border-yellow-200',
-      'B': 'text-green-600 bg-green-50 border-green-200'
-    };
-    return colors[tier] || 'text-gray-600 bg-gray-50 border-gray-200';
+  // Componente Icona per tipologie Beyblade
+  const TypeIcons = {
+    Attack: () => (
+      <svg width="20" height="20" viewBox="0 0 100 100" className="inline-block">
+        <circle cx="50" cy="50" r="45" fill="#2563eb" stroke="#1e40af" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="20" fill="white"/>
+        <path d="M50 15 L40 30 L60 30 Z" fill="white"/>
+        <path d="M85 50 L70 40 L70 60 Z" fill="white"/>
+        <path d="M50 85 L60 70 L40 70 Z" fill="white"/>
+        <path d="M15 50 L30 60 L30 40 Z" fill="white"/>
+      </svg>
+    ),
+    Stamina: () => (
+      <svg width="20" height="20" viewBox="0 0 100 100" className="inline-block">
+        <circle cx="50" cy="50" r="45" fill="#f97316" stroke="#ea580c" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="20" fill="white"/>
+        <path d="M50 30 Q70 30 75 50 Q70 70 50 70 Q30 70 25 50 Q30 30 50 30"
+              stroke="white" strokeWidth="3" fill="none"/>
+        <circle cx="50" cy="50" r="8" fill="white"/>
+      </svg>
+    ),
+    Defense: () => (
+      <svg width="20" height="20" viewBox="0 0 100 100" className="inline-block">
+        <circle cx="50" cy="50" r="45" fill="#16a34a" stroke="#15803d" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="20" fill="white"/>
+        <path d="M50 15 L75 35 L75 55 L50 75 L25 55 L25 35 Z"
+              fill="none" stroke="white" strokeWidth="3"/>
+      </svg>
+    ),
+    Balance: () => (
+      <svg width="20" height="20" viewBox="0 0 100 100" className="inline-block">
+        <circle cx="50" cy="50" r="45" fill="#dc2626" stroke="#b91c1c" strokeWidth="3"/>
+        <circle cx="50" cy="50" r="20" fill="white"/>
+        <circle cx="50" cy="50" r="35" fill="none" stroke="white" strokeWidth="2"/>
+        <circle cx="50" cy="22" r="4" fill="white"/>
+        <circle cx="78" cy="50" r="4" fill="white"/>
+        <circle cx="50" cy="78" r="4" fill="white"/>
+        <circle cx="22" cy="50" r="4" fill="white"/>
+      </svg>
+    )
   };
 
-  if (!team || !team.every(b => b.blade && b.ratchet && b.bit)) {
+  const TypeIcon = ({ type, size = 20 }) => {
+    const IconComponent = TypeIcons[type];
+    if (!IconComponent) return null;
+    return <IconComponent />;
+  };
+
+  // Helper per colore tier
+  const getTierColor = (tier) => {
+    const colors = {
+      'S+': 'text-red-600 font-bold',
+      'S': 'text-orange-600 font-bold',
+      'A': 'text-yellow-600 font-semibold',
+      'B': 'text-green-600'
+    };
+    return colors[tier] || 'text-gray-600';
+  };
+
+  // Helper per formato prezzo
+  const formatPrice = (price) => {
+    return price || 'Prezzo N/D';
+  };
+
+  if (loading || optimizing) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
           <div className="text-center">
-            <AlertCircle className="mx-auto mb-4 text-yellow-500" size={48} />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Team Incompleto</h3>
-            <p className="text-gray-600">Completa tutti i Beyblade del team per vedere l'ottimizzazione degli acquisti.</p>
+            <Calculator className="animate-pulse mx-auto mb-4 text-blue-500" size={48} />
+            <p className="text-gray-600">
+              {optimizing ? 'Ottimizzando acquisti...' : 'Caricando dati...'}
+            </p>
+            {optimizing && (
+              <div className="mt-4 w-64 bg-gray-200 rounded-full h-2 mx-auto">
+                <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+          <div className="text-center">
+            <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Errore nell'ottimizzazione</h3>
+            <p className="text-gray-600">{error}</p>
             <button
               onClick={onClose}
-              className="mt-4 px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
               Chiudi
             </button>
@@ -351,13 +114,22 @@ const ShoppingOptimizer = ({ team, onClose }) => {
     );
   }
 
-  if (loading) {
+  if (!optimization) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
           <div className="text-center">
-            <Calculator className="animate-pulse mx-auto mb-4 text-blue-500" size={48} />
-            <p className="text-gray-600">Calcolando ottimizzazione acquisti...</p>
+            <Calculator className="mx-auto mb-4 text-gray-400" size={48} />
+            <p className="text-gray-600">Nessuna ottimizzazione disponibile</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Assicurati che il team sia completo
+            </p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Chiudi
+            </button>
           </div>
         </div>
       </div>
@@ -383,7 +155,38 @@ const ShoppingOptimizer = ({ team, onClose }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {analysis && (
+          {!optimization.needsPurchase ? (
+            // TEAM COMPLETO
+            <div className="text-center py-12">
+              <CheckCircle className="mx-auto mb-4 text-green-500" size={64} />
+              <h3 className="text-2xl font-bold text-green-800 mb-4">
+                Team Completo! 🎉
+              </h3>
+              <p className="text-green-700 text-lg mb-2">
+                Hai già tutti i componenti per creare questo team!
+              </p>
+              <div className="mt-6 bg-green-50 border-2 border-green-300 rounded-xl p-6 max-w-md mx-auto">
+                <h4 className="font-semibold text-green-900 mb-3">Analisi Team:</h4>
+                <div className="space-y-2 text-left">
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Componenti richiesti:</span>
+                    <span className="font-bold">{optimization.analysis.totalNeeded}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Componenti posseduti:</span>
+                    <span className="font-bold">{optimization.analysis.totalOwned}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Completamento:</span>
+                    <span className="font-bold text-green-600">
+                      {optimization.analysis.completionPercentage}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // SERVE ACQUISTI
             <div className="space-y-6">
               {/* TEAM ANALYSIS */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-xl p-4">
@@ -399,19 +202,10 @@ const ShoppingOptimizer = ({ team, onClose }) => {
                       <CheckCircle size={16} />
                       ✅ HAI GIÀ:
                     </h4>
-                    <div className="space-y-1 text-sm">
-                      {analysis.owned.blades.size > 0 && (
-                        <div>• Blade: {Array.from(analysis.owned.blades).join(', ')}</div>
-                      )}
-                      {analysis.owned.ratchets.size > 0 && (
-                        <div>• Ratchet: {Array.from(analysis.owned.ratchets).join(', ')}</div>
-                      )}
-                      {analysis.owned.bits.size > 0 && (
-                        <div>• Bit: {Array.from(analysis.owned.bits).join(', ')}</div>
-                      )}
-                      {analysis.totalOwned === 0 && (
-                        <div className="text-gray-500 italic">Nessun componente</div>
-                      )}
+                    <div className="text-sm text-green-700 space-y-1">
+                      <div>• {optimization.analysis.owned.blades.length} Blades</div>
+                      <div>• {optimization.analysis.owned.ratchets.length} Ratchets</div>
+                      <div>• {optimization.analysis.owned.bits.length} Bits</div>
                     </div>
                   </div>
 
@@ -421,158 +215,182 @@ const ShoppingOptimizer = ({ team, onClose }) => {
                       <XCircle size={16} />
                       ❌ TI MANCANO:
                     </h4>
-                    <div className="space-y-1 text-sm">
-                      {analysis.missing.blades.length > 0 && (
-                        <div>• Blade: {analysis.missing.blades.join(', ')}</div>
-                      )}
-                      {analysis.missing.ratchets.length > 0 && (
-                        <div>• Ratchet: {analysis.missing.ratchets.join(', ')}</div>
-                      )}
-                      {analysis.missing.bits.length > 0 && (
-                        <div>• Bit: {analysis.missing.bits.join(', ')}</div>
-                      )}
-                      {analysis.totalMissing === 0 && (
-                        <div className="text-green-600 font-semibold">Hai tutti i componenti! 🎉</div>
-                      )}
+                    <div className="text-sm text-red-700 space-y-1">
+                      <div>• {optimization.analysis.missing.blades.length} Blades</div>
+                      <div>• {optimization.analysis.missing.ratchets.length} Ratchets</div>
+                      <div>• {optimization.analysis.missing.bits.length} Bits</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Summary Stats */}
-                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-white rounded-lg p-2">
-                    <div className="text-2xl font-bold text-blue-600">{analysis.totalNeeded}</div>
-                    <div className="text-xs text-gray-600">Componenti Totali</div>
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm text-gray-700 mb-1">
+                    <span>Completamento Team</span>
+                    <span>{optimization.analysis.completionPercentage}%</span>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <div className="text-2xl font-bold text-green-600">{analysis.totalOwned}</div>
-                    <div className="text-xs text-gray-600">Già Posseduti</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <div className="text-2xl font-bold text-red-600">{analysis.totalMissing}</div>
-                    <div className="text-xs text-gray-600">Da Acquistare</div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${optimization.analysis.completionPercentage}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
 
               {/* OPTIMAL SOLUTION */}
-              {analysis.totalMissing > 0 && analysis.optimalSolution.length > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-xl p-4">
-                  <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
-                    <Zap size={20} />
-                    🛒 PRODOTTI CONSIGLIATI (Spesa minima)
-                  </h3>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-4">
+                <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
+                  <Zap size={20} />
+                  ⚡ SOLUZIONE OTTIMALE
+                </h3>
 
-                  <div className="space-y-3">
-                    {analysis.optimalSolution.map((product, index) => (
-                      <div key={product.id} className="bg-white rounded-lg p-4 border-2 border-green-300 shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-lg text-gray-800">{product.name}</h4>
-                            {product.setName && (
-                              <p className="text-xs text-purple-600 font-semibold mt-1 bg-purple-50 inline-block px-2 py-1 rounded">
-                                📦 Set: {product.setName}
-                              </p>
-                            )}
+                <div className="mb-4 bg-white rounded-lg p-3 border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-800 font-semibold">Costo Totale Stimato:</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      €{optimization.totalCost.toFixed(0)}
+                    </span>
+                  </div>
+                  {optimization.savings && optimization.savings.percentage > 0 && (
+                    <div className="mt-2 text-sm text-green-600">
+                      💰 Risparmi fino al {optimization.savings.percentage}% rispetto ad altre soluzioni
+                    </div>
+                  )}
+                </div>
 
-                            {/* What it provides */}
-                            <div className="mt-2">
-                              <p className="font-semibold text-green-700 mb-1">✅ Ti fornisce:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {product.provides?.map((provide, i) => (
-                                  <span key={i} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                                    {provide.type}: {provide.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="text-right ml-4">
-                            <div className={`text-sm font-bold ${getTierColor(product.tier)}`}>
+                <div className="grid gap-3">
+                  {optimization.optimalSolution.map((product, index) => (
+                    <div key={product.id} className="bg-white rounded-lg p-4 border border-green-200 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-gray-800 mb-1">{product.name}</h4>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className={`px-2 py-1 rounded-full border ${getTierColor(product.tier)}`}>
                               Tier {product.tier}
-                            </div>
-                            <p className="text-lg font-bold text-green-600">{product.price}</p>
+                            </span>
+                            <span className="text-gray-600">{product.format}</span>
+                            <span className="font-medium text-gray-700">{formatPrice(product.price)}</span>
                             {product.source === 'custom' && (
-                              <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded font-semibold mt-1">
-                                🎨 Personalizzato
+                              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                                🎨 Custom
                               </span>
                             )}
                           </div>
                         </div>
+                        <div className="text-lg font-bold text-green-600">
+                          €{product.priceAvg?.toFixed(0)}
+                        </div>
+                      </div>
+
+                      {/* Components Provided */}
+                      <div className="border-t pt-3">
+                        <div className="text-sm font-semibold text-gray-700 mb-2">Fornisce:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {product.provides?.map(provide => (
+                            <div
+                              key={provide.name}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${getTypeBgColor(getComponentType(provide.type, provide.name))} ${getTypeColor(getComponentType(provide.type, provide.name))}`}
+                            >
+                              <TypeIcon type={getComponentType(provide.type, provide.name)} size={12} />
+                              {provide.name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Component Details */}
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                        {product.blade?.name && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <TypeIcon type={getComponentType('blade', product.blade.name)} size={10} />
+                            <span className="truncate">{product.blade.name}</span>
+                          </div>
+                        )}
+                        {product.ratchet?.name && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <TypeIcon type={getComponentType('ratchet', product.ratchet.name)} size={10} />
+                            <span className="truncate">{product.ratchet.name}</span>
+                          </div>
+                        )}
+                        {product.bit?.name && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <TypeIcon type={getComponentType('bit', product.bit.name)} size={10} />
+                            <span className="truncate">{product.bit.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ALTERNATIVE */}
+              {optimization.alternatives && optimization.alternatives.length > 0 && (
+                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl p-4">
+                  <h3 className="text-xl font-bold text-orange-900 mb-4 flex items-center gap-2">
+                    <TrendingDown size={20} />
+                    🔄 ALTERNATIVE
+                  </h3>
+
+                  <div className="space-y-3">
+                    {optimization.alternatives.map((alt, index) => (
+                      <div key={index} className="bg-white rounded-lg p-3 border border-orange-200">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-800">{alt.name}</h4>
+                            <p className="text-sm text-gray-600">{alt.description}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-orange-600">€{alt.totalCost.toFixed(0)}</div>
+                            {optimization.savings && (
+                              <div className="text-xs text-orange-500">
+                                +{optimization.savings.maxCost - alt.totalCost}€
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-gray-600">
+                          {alt.products.length} prodotti:
+                          {alt.products.slice(0, 3).map(p => p.name).join(', ')}
+                          {alt.products.length > 3 && `...`}
+                        </div>
                       </div>
                     ))}
                   </div>
-
-                  {/* Cost Summary */}
-                  <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
-                    <div className="grid md:grid-cols-2 gap-4 items-center">
-                      <div>
-                        <p className="text-2xl font-bold text-green-600">
-                          💰 TOTALE SPESA: ~{engine.calculateTotalCost(analysis.optimalSolution).toFixed(0)}€
-                        </p>
-                        {analysis.savings.percentage > 0 && (
-                          <p className="text-sm text-green-700 font-semibold mt-1">
-                            💾 RISPARMI: ~{analysis.savings.amount.toFixed(0)}€ ({analysis.savings.percentage}%)
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">
-                          {analysis.optimalSolution.length} prodotti per {analysis.totalMissing} componenti mancanti
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* ALTERNATIVES */}
-              {analysis.alternatives.length > 0 && (
-                <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                      <TrendingDown size={20} />
-                      ⚠️ ALTERNATIVE PIÙ COSTOSE
-                    </h3>
-                    <button
-                      onClick={() => setShowAlternatives(!showAlternatives)}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                      {showAlternatives ? 'Nascondi' : 'Mostra'}
-                    </button>
-                  </div>
-
-                  {showAlternatives && (
-                    <div className="space-y-4">
-                      {analysis.alternatives.map((alternative, index) => (
-                        <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-gray-800">{alternative.name}</h4>
-                            <span className="text-sm font-bold text-red-600">
-                              ~{alternative.estimatedCost.toFixed(0)}€
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{alternative.description}</p>
-                          <div className="text-xs text-gray-500">
-                            {alternative.productsCount} prodotti
-                          </div>
-                        </div>
-                      ))}
+              {/* STATISTICS */}
+              {optimization.candidatesCount && (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Package size={16} />
+                    Statistiche Analisi
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <div className="text-gray-500">Prodotti analizzati</div>
+                      <div className="font-bold">{optimization.candidatesCount}</div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Already Complete */}
-              {analysis.totalMissing === 0 && (
-                <div className="text-center py-8">
-                  <CheckCircle className="mx-auto mb-4 text-green-500" size={64} />
-                  <h3 className="text-2xl font-bold text-green-600 mb-2">Team Completo! 🎉</h3>
-                  <p className="text-gray-600">
-                    Hai già tutti i componenti necessari per creare il tuo team.
-                    Nessun acquisto richiesto!
-                  </p>
+                    <div>
+                      <div className="text-gray-500">Prodotti selezionati</div>
+                      <div className="font-bold">{optimization.optimalSolution.length}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Componenti mancanti</div>
+                      <div className="font-bold">{optimization.analysis.totalMissing}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Efficienza</div>
+                      <div className="font-bold">
+                        {optimization.analysis.totalMissing > 0
+                          ? Math.round((optimization.analysis.totalMissing / optimization.optimalSolution.length) * 10) / 10
+                          : 0} pezzi/prodotto
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

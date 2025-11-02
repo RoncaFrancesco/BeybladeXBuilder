@@ -369,6 +369,270 @@ export class CollectionManager {
     }
   }
 
+  static async exportCollection() {
+    try {
+      // Carica tutti i prodotti disponibili nel database
+      const db = await OfficialDatabaseManager.load();
+      const customProducts = await CustomProductsManager.load();
+      const collection = await this.load();
+
+      // Carica anche i rating
+      const ratings = await this.loadRatings();
+
+      // Combina prodotti ufficiali e personalizzati
+      const allProducts = [
+        ...db.products.map(p => ({ ...p, source: 'official' })),
+        ...customProducts.map(p => ({ ...p, source: 'custom', id: p.id || `custom_${Date.now()}` }))
+      ];
+
+      // Marca i prodotti posseduti
+      const ownedIds = new Set(collection.ownedProducts);
+      allProducts.forEach(product => {
+        product.owned = ownedIds.has(product.id);
+      });
+
+      // Crea un CSV completo con rating
+      const csvRows = allProducts.map(product => ({
+        '#': product.id.replace('prod_', ''),
+        'NOME PRODOTTO': product.name,
+        'BLADE': product.blade.name,
+        'RATCHET': product.ratchet.name,
+        'BIT': product.bit.name,
+        'TIER': product.tier,
+        'PREZZO': product.price,
+        'FORMATO': product.format,
+        'POSSEDUTO?': product.owned ? 'YES' : 'NO',
+        'RATING BLADE': ratings.blade[product.blade.name] ? ratings.blade[product.blade.name].rating : '',
+        'NOTE BLADE': ratings.blade[product.blade.name]?.notes || '',
+        'RATING RATCHET': ratings.ratchet[product.ratchet.name] ? ratings.ratchet[product.ratchet.name].rating : '',
+        'NOTE RATCHET': ratings.ratchet[product.ratchet.name]?.notes || '',
+        'RATING BIT': ratings.bit[product.bit.name] ? ratings.bit[product.bit.name].rating : '',
+        'NOTE BIT': ratings.bit[product.bit.name]?.notes || ''
+      }));
+
+      const ownedCount = csvRows.filter(r => r['POSSEDUTO?'] === 'YES').length;
+      const ratedBlades = csvRows.filter(r => r['RATING BLADE']).length;
+      const ratedRatchets = csvRows.filter(r => r['RATING RATCHET']).length;
+      const ratedBits = csvRows.filter(r => r['RATING BIT']).length;
+
+      console.log(`Exportati ${csvRows.length} prodotti (${ownedCount} posseduti, ${ratedBlades} blade valutate, ${ratedRatchets} ratchet valutati, ${ratedBits} bit valutati)`);
+
+      return csvRows;
+    } catch (error) {
+      console.error('Errore esportazione collezione:', error);
+      throw error;
+    }
+  }
+
+  static async loadRatings() {
+    try {
+      let ratings = { blade: {}, ratchet: {}, bit: {} };
+
+      // Try window.storage first
+      if (window.storage && typeof window.storage.get === 'function') {
+        const result = await window.storage.get('beyblade-ratings');
+        ratings = result?.value ? JSON.parse(result.value) : ratings;
+      } else {
+        const stored = localStorage.getItem('beyblade-ratings');
+        ratings = stored ? JSON.parse(stored) : ratings;
+      }
+
+      return ratings;
+    } catch (error) {
+      console.error('Errore caricamento rating:', error);
+      return { blade: {}, ratchet: {}, bit: {} };
+    }
+  }
+
+  static async saveRatings(ratings) {
+    try {
+      // Try window.storage first
+      if (window.storage && typeof window.storage.set === 'function') {
+        await window.storage.set('beyblade-ratings', JSON.stringify(ratings));
+      } else {
+        localStorage.setItem('beyblade-ratings', JSON.stringify(ratings));
+      }
+      return true;
+    } catch (error) {
+      console.error('Errore salvataggio rating:', error);
+      throw error;
+    }
+  }
+
+  static async importCollection(csvData) {
+    try {
+      // Validazione base
+      if (!Array.isArray(csvData)) {
+        throw new Error('Dati non validi');
+      }
+
+      // Carica la collezione attuale e i rating attuali
+      const currentCollection = await this.load();
+      const currentOwnedProducts = new Set(currentCollection.ownedProducts);
+      const currentRatings = await this.loadRatings();
+      const db = await OfficialDatabaseManager.load();
+
+      // Array per i nuovi prodotti da aggiungere
+      const newProductIds = [];
+      const existingProductIds = [];
+      const notFoundProducts = [];
+
+      // Nuovi rating da importare
+      const newRatings = { blade: {}, ratchet: {}, bit: {} };
+      const updatedRatingsCount = { blade: 0, ratchet: 0, bit: 0 };
+
+      csvData.forEach((row, index) => {
+        try {
+          // Supporta sia il nuovo formato ("POSSEDUTO?") che quello vecchio ("owned")
+          const isOwned = row['POSSEDUTO?'] === 'YES' || row.owned === 'YES';
+
+          // Estrai i dati dal CSV
+          const productNumber = row['#'] || row.id;
+          const productName = row['NOME PRODOTTO'] || row.name;
+          const bladeName = row['BLADE'] || row.blade_name;
+          const ratchetName = row['RATCHET'] || row.ratchet_name;
+          const bitName = row['BIT'] || row.bit_name;
+
+          // Cerca il prodotto nel database ufficiale usando diversi metodi
+          let foundProduct = null;
+
+          // Metodo 1: Cerca per numero prodotto
+          if (productNumber) {
+            foundProduct = db.products.find(p => p.id === `prod_${String(productNumber).padStart(3, '0')}`);
+          }
+
+          // Metodo 2: Cerca per nome esatto
+          if (!foundProduct && productName) {
+            foundProduct = db.products.find(p => p.name === productName);
+          }
+
+          // Metodo 3: Cerca per combinazione componenti
+          if (!foundProduct && bladeName && ratchetName && bitName) {
+            foundProduct = db.products.find(p =>
+              p.blade.name === bladeName &&
+              p.ratchet.name === ratchetName &&
+              p.bit.name === bitName
+            );
+          }
+
+          if (foundProduct) {
+            // Gestione collezione (solo se POSSEDUTO? = YES)
+            if (isOwned) {
+              if (currentOwnedProducts.has(foundProduct.id)) {
+                existingProductIds.push(foundProduct.id);
+              } else {
+                newProductIds.push(foundProduct.id);
+              }
+            }
+
+            // Gestione rating (sempre, indipendentemente dal possesso)
+            if (bladeName) {
+              const bladeRating = this.parseRating(row['RATING BLADE']);
+              const bladeNotes = (row['NOTE BLADE'] || '').trim();
+
+              if (bladeRating > 0 || bladeNotes) {
+                newRatings.blade[bladeName] = {
+                  rating: bladeRating,
+                  notes: bladeNotes
+                };
+                if (!currentRatings.blade[bladeName] ||
+                    currentRatings.blade[bladeName].rating !== bladeRating ||
+                    currentRatings.blade[bladeName].notes !== bladeNotes) {
+                  updatedRatingsCount.blade++;
+                }
+              }
+            }
+
+            if (ratchetName) {
+              const ratchetRating = this.parseRating(row['RATING RATCHET']);
+              const ratchetNotes = (row['NOTE RATCHET'] || '').trim();
+
+              if (ratchetRating > 0 || ratchetNotes) {
+                newRatings.ratchet[ratchetName] = {
+                  rating: ratchetRating,
+                  notes: ratchetNotes
+                };
+                if (!currentRatings.ratchet[ratchetName] ||
+                    currentRatings.ratchet[ratchetName].rating !== ratchetRating ||
+                    currentRatings.ratchet[ratchetName].notes !== ratchetNotes) {
+                  updatedRatingsCount.ratchet++;
+                }
+              }
+            }
+
+            if (bitName) {
+              const bitRating = this.parseRating(row['RATING BIT']);
+              const bitNotes = (row['NOTE BIT'] || '').trim();
+
+              if (bitRating > 0 || bitNotes) {
+                newRatings.bit[bitName] = {
+                  rating: bitRating,
+                  notes: bitNotes
+                };
+                if (!currentRatings.bit[bitName] ||
+                    currentRatings.bit[bitName].rating !== bitRating ||
+                    currentRatings.bit[bitName].notes !== bitNotes) {
+                  updatedRatingsCount.bit++;
+                }
+              }
+            }
+
+          } else {
+            notFoundProducts.push(productName || productNumber || `Riga ${index + 1}`);
+          }
+        } catch (error) {
+          console.warn(`Errore elaborazione riga ${index + 1}:`, error);
+        }
+      });
+
+      // Aggiorna la collezione se ci sono prodotti posseduti
+      let collectionResult = null;
+      if (newProductIds.length > 0 || existingProductIds.length > 0) {
+        const updatedOwnedProducts = [...currentOwnedProducts, ...newProductIds];
+        const uniqueProductIds = [...new Set(updatedOwnedProducts)].sort();
+
+        const collection = {
+          ownedProducts: uniqueProductIds,
+          lastUpdate: new Date().toISOString()
+        };
+
+        collectionResult = await this.save(collection);
+      }
+
+      // Aggiorna i rating
+      await this.saveRatings(newRatings);
+
+      // Log dettagliato
+      console.log(`Importazione completata:`);
+      console.log(`- Prodotti già presenti: ${existingProductIds.length}`);
+      console.log(`- Nuovi prodotti aggiunti: ${newProductIds.length}`);
+      console.log(`- Prodotti non trovati: ${notFoundProducts.length}`);
+      console.log(`- Rating blade aggiornati: ${updatedRatingsCount.blade}`);
+      console.log(`- Rating ratchet aggiornati: ${updatedRatingsCount.ratchet}`);
+      console.log(`- Rating bit aggiornati: ${updatedRatingsCount.bit}`);
+
+      if (notFoundProducts.length > 0) {
+        console.warn('Prodotti non trovati:', notFoundProducts);
+      }
+
+      return collectionResult;
+    } catch (error) {
+      console.error('Errore importazione collezione:', error);
+      throw error;
+    }
+  }
+
+  // Helper per parsare rating da numero singolo (1-5)
+  static parseRating(ratingString) {
+    if (!ratingString) return 0;
+
+    const rating = ratingString.toString().trim();
+
+    // Solo formato numerico diretto: 1, 2, 3, 4, 5
+    const num = parseInt(rating);
+    return isNaN(num) ? 0 : Math.max(0, Math.min(5, num));
+  }
+
   static async getStats() {
     try {
       const collection = await this.load();

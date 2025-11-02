@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Package, Search, Filter, Check, X, Star, TrendingUp, Calendar, Download, Upload, Trash2, Plus, AlertCircle } from 'lucide-react';
-import { CollectionManager, DatabaseUtils, OfficialDatabaseManager } from '../utils/databaseManager.js';
+import { Package, Search, Filter, Check, X, Star, TrendingUp, Calendar, Download, Upload, Trash2, Plus, AlertCircle, FileSpreadsheet, Eye, EyeOff } from 'lucide-react';
+import { useUnifiedDatabase } from '../hooks/useUnifiedDatabase.js';
 import { getComponentType, getTypeColor, getTypeBgColor } from '../data/beybladeTypes.js';
+import Papa from 'papaparse';
+import { OfficialDatabaseManager } from '../utils/databaseManager.js';
+import { validateDatabase, productsToCsvRows, generateCsvTemplate, csvRowToProduct } from '../data/databaseSchema.js';
 
 // Icone tipologie Beyblade (stesse da App.js per consistenza)
 const TypeIcons = {
@@ -52,12 +55,19 @@ const TypeIcon = ({ type, size = 16 }) => {
 };
 
 const MyCollection = ({ onClose }) => {
-  // STATO COMPONENTE NUOVO
-  const [ownedProducts, setOwnedProducts] = useState([]);     // Solo prodotti posseduti
-  const [allProducts, setAllProducts] = useState([]);         // Database completo (per ricerca)
+  // Usa hook unificato per tutti i dati
+  const {
+    products: allProducts,
+    ownedComponents,
+    loading,
+    error,
+    addProductToCollection,
+    removeProductFromCollection,
+    refresh
+  } = useUnifiedDatabase();
+
   const [searchQuery, setSearchQuery] = useState('');         // Query ricerca
   const [searchResults, setSearchResults] = useState([]);     // Risultati ricerca
-  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [filters, setFilters] = useState({
     tier: '',
@@ -65,34 +75,17 @@ const MyCollection = ({ onClose }) => {
     sortBy: 'date'
   });
 
-  // Caricamento dati iniziali
+  // Stati per sistema CSV
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  const [importedData, setImportedData] = useState(null);
+  const [importValidation, setImportValidation] = useState(null);
+
+  // Prodotti posseduti dall'hook
+  const ownedProducts = ownedComponents?.products || [];
+
+  // LOGICA RICERCA (usa dati dall'hook)
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-
-        // Carica database completo per ricerca
-        const allProds = await DatabaseUtils.getAllProducts();
-        setAllProducts(allProds);
-
-        // Carica SOLO prodotti posseduti per visualizzazione
-        const owned = await CollectionManager.getOwnedProducts();
-        setOwnedProducts(owned);
-
-      } catch (error) {
-        console.error('Errore caricamento collezione:', error);
-        showToast('❌ Errore nel caricamento della collezione', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  // LOGICA RICERCA (Mostra solo se searchQuery non vuoto)
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
+    if (searchQuery.trim().length < 2 || !allProducts.length) {
       setSearchResults([]);
       return;
     }
@@ -189,17 +182,17 @@ const MyCollection = ({ onClose }) => {
     [ownedProducts]
   );
 
-  // FUNZIONI CRUD
+  // FUNZIONI CRUD (usano hook unificato)
   const addToCollection = async (product) => {
     try {
-      await CollectionManager.addProduct(product.id);
+      const result = await addProductToCollection(product);
 
-      // Aggiunge timestamp per ordinamento
-      const productWithTimestamp = { ...product, timestamp: Date.now() };
-      setOwnedProducts([...ownedProducts, productWithTimestamp]);
-
-      setSearchQuery(''); // Pulisci ricerca
-      showToast(`✅ ${product.name} aggiunto alla collezione!`, 'success');
+      if (result.success) {
+        setSearchQuery(''); // Pulisci ricerca
+        showToast(`✅ ${product.name} aggiunto alla collezione!`, 'success');
+      } else {
+        showToast(`❌ Errore aggiunta prodotto: ${result.error}`, 'error');
+      }
     } catch (error) {
       console.error('Errore aggiunta prodotto:', error);
       showToast('❌ Errore aggiunta prodotto', 'error');
@@ -208,57 +201,20 @@ const MyCollection = ({ onClose }) => {
 
   const removeFromCollection = async (productId) => {
     try {
-      await CollectionManager.removeProduct(productId);
-      setOwnedProducts(ownedProducts.filter(p => p.id !== productId));
-      showToast('✅ Prodotto rimosso dalla collezione', 'success');
+      const result = await removeProductFromCollection(productId);
+
+      if (result.success) {
+        showToast('✅ Prodotto rimosso dalla collezione', 'success');
+      } else {
+        showToast(`❌ Errore rimozione prodotto: ${result.error}`, 'error');
+      }
     } catch (error) {
       console.error('Errore rimozione prodotto:', error);
       showToast('❌ Errore rimozione prodotto', 'error');
     }
   };
 
-  const exportCollection = async () => {
-    try {
-      const collection = await CollectionManager.exportCollection();
-      const dataStr = JSON.stringify(collection, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `beyblade-collection-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      showToast('📦 Collezione esportata con successo!', 'success');
-    } catch (error) {
-      console.error('Errore esportazione:', error);
-      showToast('❌ Errore esportazione collezione', 'error');
-    }
-  };
-
-  const importCollection = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const importedData = JSON.parse(text);
-
-      await CollectionManager.importCollection(importedData);
-
-      // Ricarica i dati
-      const owned = await CollectionManager.getOwnedProducts();
-      setOwnedProducts(owned);
-
-      showToast('📦 Collezione importata con successo!', 'success');
-    } catch (error) {
-      console.error('Errore importazione:', error);
-      showToast('❌ Errore importazione collezione', 'error');
-    }
-
-    // Reset input file
-    event.target.value = '';
-  };
-
+  
   // Toast notifications
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -274,6 +230,183 @@ const MyCollection = ({ onClose }) => {
       'B': 'text-green-600'
     };
     return colors[tier] || 'text-gray-600';
+  };
+
+  /**
+   * EXPORT: Scarica database in formato CSV
+   */
+  const handleExportCSV = async () => {
+    try {
+      showToast('📤 Preparando export CSV...', 'info');
+
+      // Carica database attuale
+      const db = await OfficialDatabaseManager.load();
+
+      // Converti in formato CSV
+      const csvRows = productsToCsvRows(db.products);
+
+      // Genera CSV con Papa Parse
+      const csv = Papa.unparse(csvRows, {
+        header: true,
+        columns: [
+          'id', 'name',
+          'blade_name', 'blade_type',
+          'ratchet_name', 'ratchet_type',
+          'bit_name', 'bit_type',
+          'price', 'tier', 'format',
+          'set_name', 'release_date', 'status'
+        ]
+      });
+
+      // Download file
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `beyblade-database-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`✅ Database esportato! ${db.products.length} prodotti scaricati`, 'success');
+    } catch (error) {
+      console.error('Errore export CSV:', error);
+      showToast('❌ Errore durante l\'export CSV', 'error');
+    }
+  };
+
+  /**
+   * IMPORT: Carica CSV modificato
+   */
+  const handleImportCSV = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      showToast('📥 Leggendo file CSV...', 'info');
+
+      // Leggi file
+      const text = await file.text();
+
+      // Parse CSV
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.trim(),
+        complete: async (results) => {
+          try {
+            if (results.errors.length > 0) {
+              showToast(`❌ Errore lettura CSV: ${results.errors[0].message}`, 'error');
+              return;
+            }
+
+            // Converti righe CSV in formato database
+            const products = results.data
+              .map((row, index) => csvRowToProduct(row, index))
+              .filter(Boolean); // Rimuovi righe null
+
+            if (products.length === 0) {
+              showToast('❌ Nessun prodotto valido trovato nel CSV', 'error');
+              return;
+            }
+
+            // Crea database temporaneo
+            const tempDatabase = {
+              metadata: {
+                version: '1.0.0',
+                lastUpdate: new Date().toISOString().split('T')[0],
+                totalProducts: products.length,
+                description: 'Database importato da CSV',
+                formats: [...new Set(products.map(p => p.format))],
+                tiers: ['S+', 'S', 'A', 'B']
+              },
+              products
+            };
+
+            // Valida database
+            const validation = validateDatabase(tempDatabase);
+
+            // Mostra anteprima
+            setImportedData(tempDatabase);
+            setImportValidation(validation);
+            setShowImportPreview(true);
+
+          } catch (error) {
+            showToast(`❌ Errore conversione CSV: ${error.message}`, 'error');
+          }
+        },
+        error: (error) => {
+          showToast(`❌ Errore lettura CSV: ${error.message}`, 'error');
+        }
+      });
+
+      // Reset input file
+      event.target.value = '';
+
+    } catch (error) {
+      console.error('Errore import CSV:', error);
+      showToast('❌ Errore durante l\'import CSV', 'error');
+    }
+  };
+
+  /**
+   * CONFERMA IMPORT dopo anteprima
+   */
+  const confirmImport = async () => {
+    if (!importedData || !importValidation) return;
+
+    // Se ci sono errori critici, blocca
+    if (!importValidation.valid) {
+      showToast('❌ Impossibile importare: il database contiene errori critici', 'error');
+      return;
+    }
+
+    try {
+      showToast('💾 Salvando database...', 'info');
+
+      // Salva database
+      await OfficialDatabaseManager.update(importedData);
+
+      // Ricarica dati hook unificato
+      await refresh();
+
+      // Chiudi anteprima
+      setShowImportPreview(false);
+      setImportedData(null);
+      setImportValidation(null);
+
+      showToast(`✅ Database aggiornato! ${importedData.products.length} prodotti importati`, 'success');
+
+    } catch (error) {
+      console.error('Errore salvataggio database:', error);
+      showToast('❌ Errore durante il salvataggio', 'error');
+    }
+  };
+
+  /**
+   * DOWNLOAD TEMPLATE CSV vuoto
+   */
+  const handleDownloadTemplate = () => {
+    try {
+      const template = generateCsvTemplate();
+
+      const csv = Papa.unparse(template, { header: true });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'beyblade-template.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('✅ Template CSV scaricato!', 'success');
+    } catch (error) {
+      console.error('Errore download template:', error);
+      showToast('❌ Errore durante il download del template', 'error');
+    }
   };
 
   return (
@@ -327,28 +460,7 @@ const MyCollection = ({ onClose }) => {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={exportCollection}
-                    className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-1"
-                    title="Esporta collezione"
-                  >
-                    <Download size={16} />
-                    Export
-                  </button>
-
-                  <label className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors cursor-pointer flex items-center justify-center gap-1">
-                    <Upload size={16} />
-                    Import
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={importCollection}
-                      className="hidden"
-                    />
-                  </label>
                 </div>
-              </div>
 
               {/* SEARCH BAR */}
               <div className="relative">
@@ -551,6 +663,192 @@ const MyCollection = ({ onClose }) => {
             </div>
           )}
         </div>
+
+        {/* Modal Anteprima Import */}
+        {showImportPreview && importedData && importValidation && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-blue-500 to-purple-500">
+                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Eye size={28} />
+                  🔍 Anteprima Import Database
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowImportPreview(false);
+                    setImportedData(null);
+                    setImportValidation(null);
+                  }}
+                  className="text-white hover:bg-white/20 p-2 rounded transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Validation Status */}
+                <div className={`mb-6 p-4 rounded-lg border-2 ${
+                  importValidation.valid
+                    ? 'bg-green-50 border-green-300'
+                    : 'bg-red-50 border-red-300'
+                }`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`text-2xl ${importValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
+                      {importValidation.valid ? '✅' : '❌'}
+                    </div>
+                    <div>
+                      <h4 className={`font-bold text-lg ${importValidation.valid ? 'text-green-800' : 'text-red-800'}`}>
+                        {importValidation.valid ? 'Validazione Superata!' : 'Errori di Validazione'}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-700">
+                        {importedData.products.length}
+                      </div>
+                      <div className="text-sm text-gray-600">Prodotti Totali</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-700">
+                        {importValidation.summary?.uniqueIds || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">ID Unici</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-700">
+                        {importValidation.warnings?.length || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Avvertimenti</div>
+                    </div>
+                  </div>
+
+                  {/* Errors */}
+                  {importValidation.errors && importValidation.errors.length > 0 && (
+                    <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded">
+                      <h5 className="font-bold text-red-800 mb-2">🚫 Errori Critici:</h5>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        {importValidation.errors.map((error, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="text-red-500 mt-1">•</span>
+                            <span>{error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {importValidation.warnings && importValidation.warnings.length > 0 && (
+                    <div className="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded">
+                      <h5 className="font-bold text-yellow-800 mb-2">⚠️ Avvertimenti:</h5>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        {importValidation.warnings.slice(0, 5).map((warning, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="text-yellow-500 mt-1">•</span>
+                            <span>{warning}</span>
+                          </li>
+                        ))}
+                        {importValidation.warnings.length > 5 && (
+                          <li className="text-yellow-600 text-sm italic">
+                            ...e altri {importValidation.warnings.length - 5} avvertimenti
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Products Preview */}
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                  <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <Package size={18} />
+                    📋 Prodotti da Importare:
+                  </h4>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {importedData.products.slice(0, 15).map((product, index) => (
+                      <div key={product.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-800">{product.name}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {product.blade?.name} • {product.ratchet?.name} • {product.bit?.name}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`px-2 py-1 rounded text-xs font-bold ${
+                              product.tier === 'S+' ? 'bg-red-100 text-red-700' :
+                              product.tier === 'S' ? 'bg-orange-100 text-orange-700' :
+                              product.tier === 'A' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              Tier {product.tier}
+                            </span>
+                            <span className="text-sm font-medium text-gray-700">
+                              {product.price}
+                            </span>
+                            {product.status === 'discontinued' && (
+                              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
+                                Discontinued
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {importedData.products.length > 15 && (
+                      <div className="text-center text-sm text-gray-500 italic py-2">
+                        ... e altri {importedData.products.length - 15} prodotti
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 border-t bg-gray-50">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowImportPreview(false);
+                      setImportedData(null);
+                      setImportValidation(null);
+                    }}
+                    className="flex-1 px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+                  >
+                    ❌ Annulla
+                  </button>
+
+                  <button
+                    onClick={confirmImport}
+                    disabled={!importValidation.valid}
+                    className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors ${
+                      importValidation.valid
+                        ? 'bg-green-500 text-white hover:bg-green-600'
+                        : 'bg-gray-400 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {importValidation.valid
+                      ? `✅ Conferma Import (${importedData.products.length} prodotti)`
+                      : '❌ Impossibile Importare (Errori presenti)'
+                    }
+                  </button>
+                </div>
+
+                {importValidation.warnings && importValidation.warnings.length > 0 && (
+                  <div className="mt-3 text-center text-sm text-orange-600">
+                    ⚠️ Ci sono {importValidation.warnings.length} avvertimenti ma puoi procedere
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toast Notifications */}
         {toast && (

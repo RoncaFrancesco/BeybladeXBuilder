@@ -482,6 +482,167 @@ Il progetto è deployato su Vercel con CI/CD automatico:
 - Icone personalizzate per tipologie Beyblade
 - Design responsive mobile-first
 
+## 📝 Come Aggiornare il Database (Metodo CSV)
+
+### 🔄 **Workflow Completo CSV**
+
+Il sistema permette di modificare il database completo usando Excel, Google Sheets o qualsiasi editor di testo!
+
+#### **1️⃣ **Scarica Database Attuale**
+```
+App → La Mia Collezione → 📥 Scarica Database CSV
+• Scarica il file beyblade-database-YYYY-MM-DD.csv
+• Contiene tutti i prodotti attuali con tutti i dati
+• Formato CSV compatibile con Excel/Google Sheets
+```
+
+#### **2️⃣ **Modifica con Excel/Google Sheets**
+```
+Excel: File → Apri → Seleziona file CSV → Delimitato: Virgola
+Google Sheets: File → Importa → Carica file → Sostituisci foglio
+LibreOffice: File → Apri → Seleziona CSV → Impostazioni: UTF-8, Virgola
+```
+
+#### **3️⃣ **Operazioni Disponibili**
+
+**✅ Aggiungere Nuovo Prodotto:**
+```csv
+prod_033,Phoenix Storm 4-60GF,Phoenix Storm,Attack,4-60,Attack,GF,Attack,22-28€,S,BX Starter,,2025-12,active
+```
+
+**✅ Modificare Prezzo:**
+```csv
+prod_001,Wizard Rod 5-70DB (UX Booster),Wizard Rod,Defense,5-70,Stamina,DB,Defense,28-33€,S+,UX Booster,,2025-01,active
+                                                                           ^^^^^^ Nuovo prezzo
+```
+
+**✅ Cambiare Tier:**
+```csv
+prod_005,Sword Dran 3-60A,Sword Dran,Balance,3-60,Attack,A,Attack,20-25€,A,UX Starter,,2025-01,active
+                                                                      ^ Nuovo tier
+```
+
+**✅ Marcare come Discontinued:**
+```csv
+prod_018,Obsidian Shell 4-60D,Obsidian Shell,Defense,4-60,Attack,D,Defense,15-18€,B,BX Booster,,2025-07,discontinued
+                                                                                                        ^^^^^^^^^^^
+```
+
+**✅ Nuovi Prodotti in Arrivo:**
+```csv
+prod_035,Thunder Dragon 3-80LF,Thunder Dragon,Attack,3-80,Defense,LF,Attack,28-33€,S+,UX Booster,,2025-12,upcoming
+```
+
+#### **4️⃣ **Salva il File**
+- **Excel**: File → Salva con nome → Tipo file: CSV UTF-8
+- **Google Sheets**: File → Scarica → Valori separati da virgola (.csv)
+- **Importante**: Mantieni separatore virgola (non punto e virgola)
+
+#### **5️⃣ **Importa nell'App**
+```
+App → La Mia Collezione → 📤 Carica CSV Modificato
+• Seleziona il file CSV modificato
+• Visualizza anteprima con validazione
+• Controlla errori e avvertimenti
+• Conferma import
+```
+
+---
+
+### ⚠️ **Regole CSV Importanti**
+
+| Campo | Formato Richiesto | Esempio | Obbligatorio |
+|-------|------------------|---------|-------------|
+| `id` | `prod_XXX` | `prod_032` | ✅ Sì |
+| `name` | Testo libero | `Wizard Rod 5-70DB UX Booster` | ✅ Sì |
+| `blade_name` | Nome blade | `Wizard Rod` | ✅ Sì |
+| `blade_type` | Attack|Defense|Stamina|Balance | `Defense` | ✅ Sì |
+| `ratchet_name` | `X-Y` | `5-70` | ✅ Sì |
+| `ratchet_type` | Attack|Defense|Stamina|Balance | `Stamina` | ✅ Sì |
+| `bit_name` | Codice | `DB` | ✅ Sì |
+| `bit_type` | Attack|Defense|Stamina|Balance | `Defense` | ✅ Sì |
+| `price` | `XX-YY€` | `25-30€` | ✅ Sì |
+| `tier` | `S+|S|A|B` | `S+` | ✅ Sì |
+| `format` | Testo libero | `UX Booster` | ✅ Sì |
+| `set_name` | Testo o vuoto | `UX Dual Pack` | ❌ No |
+| `release_date` | `YYYY-MM` | `2025-11` | ✅ Sì |
+| `status` | `active|discontinued|upcoming` | `active` | ❌ No (default: active) |
+
+---
+
+### 🎯 **Esempi Pratici**
+
+#### **Esempio 1: Nuovo prodotto in arrivo**
+```csv
+prod_034,Thunder Dragon 6-80HF,Thunder Dragon,Attack,6-80,Defense,HF,Attack,25-30€,S+,UX Booster,,2025-12,upcoming
+```
+
+#### **Esempio 2: Prodotto non più disponibile**
+```csv
+prod_018,Obsidian Shell 4-60D,Obsidian Shell,Defense,4-60,Attack,D,Defense,15-18€,B,BX Booster,,2025-07,discontinued
+```
+
+#### **Esempio 3: Aggiornamento prezzo**
+```csv
+prod_001,Wizard Rod 5-70DB (UX Booster),Wizard Rod,Defense,5-70,Stamina,DB,Defense,30-35€,S+,UX Booster,,2025-01,active
+```
+
+#### **Esempio 4: Nuovo prodotto in set**
+```csv
+prod_025,Lightning Dragoon 3-70A,Lightning Dragoon,Attack,3-70,Attack,A,Attack,22-28€,S,Random Booster,Lightning Set,2025-11,active
+```
+
+---
+
+### 🚨 **Errori Comuni e Soluzioni**
+
+| Errore | Causa | Soluzione |
+|--------|-------|-----------|
+| `ID duplicato: prod_XXX` | Due prodotti con stesso ID | Cambia ID duplicato |
+| `Formato prezzo non valido` | Prezzo non è `XX-YY€` | Usa formato `25-30€` |
+| `Tier non valido` | Tier non è S+/S/A/B | Usa solo tier validi |
+| `Data non valida` | Release date non è `YYYY-MM` | Usa formato `2025-11` |
+| `Campo obbligatorio mancante` | Campo vuoto | Compila tutti i campi richiesti |
+| `Nome duplicato` | Stesso nome prodotto | Modifica nome leggermente |
+
+---
+
+### 💡 **Tip Pro**
+
+**📋 Usa il Template CSV:**
+```
+App → La Mia Collezione → 📋 Template CSV
+```
+Scarica un template pre-compilato con esempi e formati corretti!
+
+**🔄 Backup Prima di Modificare:**
+- Esporta sempre il CSV attuale prima di modificare
+- Conserva il file originale come backup
+- Testa le modifiche su un file di prova
+
+**✅ Validazione Automatica:**
+- L'app valida automaticamente ogni import
+- Mostra errori critici che bloccano l'import
+- Mostra avvertimenti che puoi ignorare
+- Anteprima completa prima di confermare
+
+---
+
+### 🛠️ **Template CSV Disponibile**
+
+Il template include:
+- Riga con spiegazione campi
+- Esempio prodotto completo
+- Esempio prodotto upcoming
+- Formattazione corretta per ogni campo
+
+**Scarica il template:**
+```
+App → La Mia Collezione → 📋 Template CSV
+```
+
+---
+
 ## 🌐 **Deploy Status**
 
 ### ✅ **Produzione Attiva:**

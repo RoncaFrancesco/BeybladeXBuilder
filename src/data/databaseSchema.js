@@ -435,6 +435,157 @@ export function extractUniqueComponents(database) {
   };
 }
 
+/**
+ * Converte riga CSV in oggetto prodotto
+ */
+export function csvRowToProduct(row, index) {
+  // Skip empty rows
+  if (!row || Object.keys(row).length === 0) {
+    return null;
+  }
+
+  // Validate required fields
+  if (!row.id || !row.name || !row.blade_name) {
+    return null;
+  }
+
+  // Clean and validate tier
+  let tier = row.tier?.trim();
+  if (tier && !TIERS.includes(tier)) {
+    console.warn(`Riga ${index + 2}: Tier non valido "${tier}", usa default "A"`);
+    tier = 'A';
+  }
+
+  // Clean and validate type fields
+  const normalizeType = (type) => {
+    if (!type) return 'Balance';
+    const cleaned = type.trim();
+    return BEYBLADE_TYPES.includes(cleaned) ? cleaned : 'Balance';
+  };
+
+  // Clean price
+  const cleanPrice = (price) => {
+    if (!price) return '0-0€';
+    const cleaned = price.trim();
+    return /^\d+-\d+€/.test(cleaned) ? cleaned : '0-0€';
+  };
+
+  // Clean release date
+  const cleanReleaseDate = (date) => {
+    if (!date) return '2025-01';
+    const cleaned = date.trim();
+    return /^\d{4}-\d{2}$/.test(cleaned) ? cleaned : '2025-01';
+  };
+
+  // Clean status
+  const cleanStatus = (status) => {
+    if (!status) return 'active';
+    const cleaned = status.trim();
+    return ['active', 'discontinued', 'upcoming'].includes(cleaned) ? cleaned : 'active';
+  };
+
+  return {
+    id: row.id.trim(),
+    name: row.name.trim(),
+    blade: {
+      name: row.blade_name.trim(),
+      type: normalizeType(row.blade_type)
+    },
+    ratchet: {
+      name: row.ratchet_name.trim(),
+      type: normalizeType(row.ratchet_type)
+    },
+    bit: {
+      name: row.bit_name.trim(),
+      type: normalizeType(row.bit_type)
+    },
+    price: cleanPrice(row.price),
+    tier: tier || 'A',
+    format: row.format?.trim() || 'UX Booster',
+    setName: row.set_name?.trim() || null,
+    releaseDate: cleanReleaseDate(row.release_date),
+    status: cleanStatus(row.status)
+  };
+}
+
+/**
+ * Converte array prodotti in righe CSV
+ */
+export function productsToCsvRows(products) {
+  return products.map(product => ({
+    id: product.id,
+    name: product.name,
+    blade_name: product.blade.name,
+    blade_type: product.blade.type,
+    ratchet_name: product.ratchet.name,
+    ratchet_type: product.ratchet.type,
+    bit_name: product.bit.name,
+    bit_type: product.bit.type,
+    price: product.price,
+    tier: product.tier,
+    format: product.format,
+    set_name: product.setName || '',
+    release_date: product.releaseDate,
+    status: product.status || 'active'
+  }));
+}
+
+/**
+ * Genera template CSV con esempi
+ */
+export function generateCsvTemplate() {
+  return [
+    {
+      id: 'prod_XXX',
+      name: 'Nome Prodotto Completo (es: Wizard Rod 5-70DB UX Booster)',
+      blade_name: 'Nome Blade (es: Wizard Rod)',
+      blade_type: 'Attack|Defense|Stamina|Balance',
+      ratchet_name: 'X-Y (es: 5-70)',
+      ratchet_type: 'Attack|Defense|Stamina|Balance',
+      bit_name: 'Codice (es: DB)',
+      bit_type: 'Attack|Defense|Stamina|Balance',
+      price: 'XX-YY€ (es: 25-30€)',
+      tier: 'S+|S|A|B',
+      format: 'UX Starter|BX Booster|Random Booster|etc',
+      set_name: '(opzionale - lascia vuoto se non in set)',
+      release_date: 'YYYY-MM (es: 2025-11)',
+      status: 'active|discontinued|upcoming'
+    },
+    {
+      id: 'prod_001',
+      name: 'Wizard Rod 5-70DB (UX Booster)',
+      blade_name: 'Wizard Rod',
+      blade_type: 'Defense',
+      ratchet_name: '5-70',
+      ratchet_type: 'Stamina',
+      bit_name: 'DB',
+      bit_type: 'Defense',
+      price: '25-30€',
+      tier: 'S+',
+      format: 'UX Booster',
+      set_name: '',
+      release_date: '2025-01',
+      status: 'active'
+    },
+    {
+      id: 'prod_002',
+      name: 'Thunder Dragon 4-60LF (BX Starter)',
+      blade_name: 'Thunder Dragon',
+      blade_type: 'Attack',
+      ratchet_name: '4-60',
+      ratchet_type: 'Attack',
+      bit_name: 'LF',
+      bit_type: 'Attack',
+      price: '22-28€',
+      tier: 'S',
+      format: 'BX Starter',
+      set_name: '',
+      release_date: '2025-02',
+      status: 'upcoming'
+    }
+  ];
+}
+
 export default {
   productSchema,
   metadataSchema,
@@ -444,6 +595,9 @@ export default {
   formatValidationErrors,
   generateProductId,
   extractUniqueComponents,
+  csvRowToProduct,
+  productsToCsvRows,
+  generateCsvTemplate,
   BEYBLADE_TYPES,
   TIERS,
   FORMATS

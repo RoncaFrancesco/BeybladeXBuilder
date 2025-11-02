@@ -14,7 +14,12 @@
       "Bash(findstr:*)",
       "Bash(npx eslint:*)",
       "Bash(git checkout:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Bash(echo:*)",
+      "Bash(\"C:\\Users\\franc\\Documents\\beyblade-builder\\README.md\")",
+      "Bash(tree:*)",
+      "Bash(git rm:*)",
+      "Bash(wmic:*)"
     ],
     "deny": [],
     "ask": []
