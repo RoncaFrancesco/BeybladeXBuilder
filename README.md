@@ -1,8 +1,53 @@
-# Beyblade X Team Builder
+# Beyblade X Team Builder v3.0.0
 
-🎯 **Crea e gestisci team Beyblade X personalizzati con database prodotti ottimizzato e sistema di rating completo**
+🎯 **Crea e gestisci team Beyblade X personalizzati con sistema avanzato di collezione e ottimizzazione acquisti intelligente**
 
-## 🚀 Caratteristiche
+**🌐 Live Demo:** [https://beybladexbuilder.vercel.app](https://beybladexbuilder.vercel.app)
+
+---
+
+## 🚀 Caratteristiche Principali
+
+### 📦 **La Mia Collezione** (NUOVO!)
+- **Gestione Completa Collezione**: Marca i prodotti che possiedi con un semplice click
+- **Filtri Avanzati**: Filtra per tier (S+/S/A/B), formato, tipologia, stato posseduto
+- **Ricerca Intelligente**: Cerca prodotti per nome con risultati in tempo reale
+- **Azioni Bulk**: Seleziona e aggiungi/rimuovi più prodotti contemporaneamente
+- **Statistiche Dettagliate**: Visualizza percentuale completamento, prodotti per tier/formato
+- **Export JSON**: Salva la tua collezione e condividila con altri blader
+- **Counter Visivo**: "Hai X prodotti su Y totali" sempre visibile
+
+### 🛒 **Ottimizzatore Acquisti Intelligente** (NUOVO!)
+- **Analisi Team vs Collezione**: Identifica automaticamente cosa possiedi e cosa manca
+- **Algoritmo Greedy Avanzato**: Calcola la combinazione ottimale di prodotti da acquistare
+- **Alternative Multiple**: Suggerimenti Budget (A/B tier) e Premium (S+/S tier)
+- **Calcolo Risparmio**: Mostra quanto risparmi rispetto ad altre combinazioni
+- **Dettaglio Forniture**: Indica esattamente quali pezzi fornisce ogni prodotto
+- **Integrazione Personalizzati**: Include i tuoi prodotti custom nell'ottimizzazione
+
+### 🏗️ **Team Builder Professionale**
+- **Sistema 3on3**: Crea squadre competitive seguendo le regole WBO/B4
+- **Sistema 1v1**: Crea singoli Beyblade per test e sfide
+- **Controllo Duplicati Intelligente**: Previene uso multi-componenti in team
+- **Nominazione Build**: Assegna nomi personalizzati ai tuoi team
+- **Valutazione Automatica**: Calcola rating medio basato sui componenti
+- **Tipologia Predominante**: Determina Attack/Defense/Stamina/Balance automaticamente
+
+### ⭐ **Sistema di Rating Completo**
+- **Rating Personalizzati**: Assegna voti 1-5 stelle a Blade, Ratchet, Bit
+- **Note Dettagliate**: Aggiungi commenti e annotazioni per ogni pezzo
+- **Import/Export JSON**: Condividi i tuoi rating con la community
+- **Visualizzazione Contestuale**: Rating mostrati direttamente nei menu
+- **Badge "TOP TIER"**: Indicazione automatica per componenti 5 stelle
+- **Valutazione Media**: Calcolo automatico rating complessivo Beyblade
+
+### 🗃️ **Database Modulare Avanzato** (NUOVO!)
+- **Database Ufficiale JSON**: 31 prodotti certificati con schema validazione
+- **Schema Validazione Robusto**: Prevenzione errori con report dettagliati
+- **Storage Manager**: Supporto window.storage + localStorage fallback
+- **Cache Intelligente**: Ottimizzazione performance con caricamento asincrono
+- **Prodotti Personalizzati**: Sistema completo per aggiunte custom
+- **Admin Mode**: Gestione avanzata database (Ctrl+Shift+A)
 
 ### 🏗️ Team Builder
 - **Sistema 3on3**: Crea squadre competitive con 3 Beyblade X seguendo le regole dei tornei WBO/B4
@@ -20,33 +65,28 @@
 - **Badge "TOP TIER"**: Indicazione automatica per i componenti con rating 5 stelle
 - **Valutazione Media**: Calcolo automatico del rating complessivo di ogni Beyblade
 
-### 📊 Database Management
-- **Database Ufficiale**: 25+ Blades, 17 Ratchets e 22 Bits certificati
-- **Prodotti Personalizzati**: Aggiungi le tue creazioni uniche con sistema completo
-- **Sistema di Set**: Organizzazione prodotti per formati (Starter, Booster, Dual Pack, Battle Set)
-- **Classificazione Tier**: S-tier, A-tier, B-tier con indicazioni visive
-- **Prezzi Indicativi**: Range di prezzo per ogni prodotto
-- **Validazione Automatica**: Controlli di integrità per i dati inseriti
+### 📚 **Libreria Build Salvata**
+- **Archivio Personale**: Gestione completa di tutti i team creati
+- **Salvataggio Automatico**: Persistenza dati con storage multiplo (window.storage → localStorage)
+- **Caricamento Rapido**: Ripristino immediato dei team salvati
+- **Gestione Semplice**: Elimina e riorganizza i build con pochi click
+- **Metadata Completi**: Data creazione, modalità, statistiche, rating
+- **Visualizzazione Organizzata**: Ordinati per data con filtri e ricerca
 
-### 🛒 Carrello Intelligente
-- **Ottimizzazione Team**: Algoritmo che calcola il numero minimo di prodotti per ottenere tutti i pezzi
-- **Combinazione Ottimale**: Suggerisce i prodotti più efficienti per creare team 3on3
-- **Visualizzazione Forniture**: Indica esattamente quali pezzi fornisce ogni prodotto
-- **Supporto Personalizzati**: Include anche i prodotti aggiunti manualmente nell'ottimizzazione
-
-### 📚 Sistema di Salvataggio
-- **Build Library**: Archivio personale di tutti i team creati
-- **Salvataggio Automatico**: Persistenza dati su localStorage con fallback multiplo
-- **Caricamento Rapido**: Ripristina immediatamente i team salvati
-- **Gestione Semplice**: Elimina e riorganizza i build con few clicks
-- **Metadata Completi**: Data di creazione, tipo di modalità, statistiche
-
-### 📱 PWA (Progressive Web App)
-- **Installabile come App**: Funziona offline su dispositivi mobili
-- **Icone Custom**: Brand personalizzato con immagini originali (7 formati diversi)
-- **Ottimizzato Mobile**: Esperienza utente fluida su smartphone/tablet
+### 📱 **PWA (Progressive Web App)**
+- **Installabile come App**: Funziona offline su tutti i dispositivi
+- **Icone Custom**: Brand personalizzato con 7 formati icona
+- **Ottimizzato Mobile**: Esperienza fluida su smartphone/tablet
 - **Service Worker**: Caching intelligente per performance elevate
 - **Manifest Completo**: Meta-tag ottimizzati per social sharing
+
+### 🔧 **Tecnologie Avanzate**
+- **React 18**: Framework moderno con hooks e performance ottimizzate
+- **Vite 4.5.14**: Build system ultra veloce con HMR
+- **Tailwind CSS**: Styling responsive e utility-first
+- **Lucide Icons**: Icone moderne e accessibili
+- **JSON Database**: Schema validato e facilmente aggiornabile
+- **Storage Abstraction**: Supporto multipi ambienti storage
 
 ## 🛠️ Stack Tecnologico
 
@@ -112,51 +152,44 @@ npm run build
 npm run preview
 ```
 
-## 🎮 Come Usare
+## 🎮 Guida Rapida
 
-### 1. Team Builder
+### 🏆 **1. Team Builder**
 1. **Scegli Modalità**:
-   - 🎯 **Beyblade Singolo**: Per testare combo specifiche
-   - 🏆 **Team 3on3**: Per creare squadre competitive seguendo le regole WBO
-2. **Seleziona Componenti**: Scegli blade, ratchet e bit dai dropdown con indicazioni visive:
+   - 🎯 **Beyblade Singolo**: Testa combo specifiche
+   - 🏆 **Team 3on3**: Crea squadre competitive (regole WBO)
+2. **Selezione Componenti**:
    - ✅ Icone colorate per tipologia (Attack/Defense/Stamina/Balance)
-   - ⭐ Rating personali visualizzati direttamente nel menu
-   - 🏆 Badge "TOP TIER" per componenti con 5 stelle
-   - 💭 Note personali per ogni componente
-3. **Nominazione Build**: Assegna un nome personalizzato al tuo team
-4. **Controllo Automatico**: In modalità 3on3 previene duplicati degli stessi pezzi
-5. **Salva Team**: Aggiungi alla tua libreria personale per uso futuro
+   - ⭐ Rating visualizzati direttamente nei menu
+   - 🏆 Badge "TOP TIER" per componenti 5 stelle
+   - 💭 Note personali integrate
+3. **Controllo Automatico**: In modalità 3on3 previene duplicati
+4. **Nominazione Build**: Assegna nomi personalizzati
+5. **Ottimizzazione**: Usa "🛒 Ottimizza Acquisti" dopo aver creato un team completo
 
-### 2. Sistema di Rating ⭐
-1. **Apri Rating Database**: Dal menu principale seleziona "⭐ Rating Database"
-2. **Scegli Categoria**: Naviga tra Blade, Ratchet, Bit con tab dedicati
-3. **Assegna Rating**:
-   - ⭐ Valutazione da 1 a 5 stelle
-   - 📝 Note personali e commenti dettagliati
-   - 💾 Salvataggio automatico con toast di conferma
-4. **Import/Export**:
-   - 📤 Esporta i tuoi rating in formato JSON
-   - 📥 Importa rating da file condivisi
-5. **Visualizzazione Intelligente**: I rating appaiono ovunque nell'app
+### 📦 **2. La Mia Collezione** (NUOVO!)
+1. **Accesso**: Clicca "📦 La Mia Collezione" dal menu principale
+2. **Gestione Prodotti**:
+   - ✅ Click su checkbox per marcare prodotti posseduti
+   - 🔍 Usa la ricerca per trovare prodotti specifici
+   - 🎛️ Filtra per tier, formato, stato posseduto
+3. **Azioni Bulk**:
+   - 🔢 Seleziona multi prodotti contemporaneamente
+   - ➕/➕ Aggiungi/rimuovi in blocco
+4. **Statistiche**: Visualizza percentuale completamento e dettagli per categoria
+5. **Export**: 💾 Salva la tua collezione in JSON
 
-### 3. Database Personalizzato
-1. **Apri Gestione Database**: Dal menu principale seleziona "🗃️ Gestione Database"
-2. **Aggiungi Prodotto**:
-   - 🗡️ **Blade**: Nome principale (es: Lightning Dragoon)
-   - 📦 **Nome Prodotto**: Auto-generato dal blade
-   - ⚙️ **Ratchet**: Configurazione meccanica
-   - 🎯 **Bit**: Tipo di performance
-   - 💰 **Prezzo**: Range di prezzo indicativo
-   - ⭐ **Tier**: Classificazione potenza (S+, S, A, B)
-3. **Validazione Automatica**: Il sistema controlla integrità dati
-4. **Integrazione Immediata**: I prodotti personalizzati appaiono in tutti i menu
-
-### 4. Carrello Intelligente e Ottimizzazione 🛒
-1. **Completa Team**: Assicurati che tutti i Beyblade siano completi
-2. **Visualizzazione Prodotti**: L'app calcola automaticamente:
-   - 🔢 **Numero minimo** di prodotti necessari
-   - 🎯 **Combinazione ottimale** per ottenere tutti i pezzi
-   - ✅ **Forniture dettagliate** di ogni prodotto
+### 🛒 **3. Ottimizzatore Acquisti** (NUOVO!)
+1. **Crea Team Completo**: 3 Beyblade con blade, ratchet, bit
+2. **Avvia Ottimizzatore**: Clicca "🛒 Ottimizza Acquisti"
+3. **Analisi Automatica**:
+   - ✅ Visualizza cosa possiedi già
+   - ❌ Identifica componenti mancanti
+4. **Suggerimenti Intelligenti**:
+   - 🎯 Prodotti ottimali con dettagli forniture
+   - 💰 Costo totale e risparmio calcolato
+   - 🔄 Alternative Budget/Premium
+5. **Decisione**: Acquista i prodotti suggeriti per completare il team
 3. **Supporto Personalizzati**: Include anche i tuoi prodotti aggiunti manualmente
 4. **Informazioni Complete**: Prezzi, tier, e set di appartenenza
 
@@ -328,6 +361,44 @@ Il progetto è deployato su Vercel con CI/CD automatico:
 - 🎯 **Build Recommendations**: AI-powered suggerimenti team
 
 ---
+
+**Made with ❤️ per Beyblade X Community in Italy**
+*© 2025 Francesco Ronca - Tutti i diritti riservati*
+
+## 📝 Changelog & Roadmap
+
+### 🚀 **v3.0.0 - Advanced Collection & Shopping System (Novembre 2025)**
+**RELEASE COMPLETA - LIVE SU VERCEL**
+
+#### 🆕 **Funzionalità Principali:**
+- 📦 **La Mia Collezione**: Sistema completo gestione prodotti posseduti
+- 🛒 **Ottimizzatore Acquisti Intelligente**: Algoritmo avanzato ottimizzazione team
+- 🗃️ **Database Modulare**: Sistema JSON facilmente aggiornabile
+- 🔧 **Admin Mode**: Funzionalità avanzate (Ctrl+Shift+A)
+
+#### 🔧 **Miglioramenti Tecnici:**
+- Architettura Component-Based con 2 nuovi componenti principali
+- Database Manager con sistema CRUD completo
+- Storage manager con fallback multiplo
+- Cache intelligente per performance
+
+#### 🎨 **Miglioramenti UI/UX:**
+- Menu principale con pulsanti uniformi
+- Icone personalizzate per tipologie Beyblade
+- Design responsive mobile-first
+
+## 🌐 **Deploy Status**
+
+### ✅ **Produzione Attiva:**
+- **URL:** https://beybladexbuilder.vercel.app
+- **Versione:** v3.0.0
+- **Status:** Live e funzionante
+- **Build Size:** JS: 246KB | CSS: 32KB
+- **PWA:** Installabile su tutti i dispositivi
+
+---
+
+**🎉 Beyblade X Team Builder v3.0.0 - COMPLETAMENTE FUNZIONANTE!**
 
 **Made with ❤️ per Beyblade X Community in Italy**
 *© 2025 Francesco Ronca - Tutti i diritti riservati*
