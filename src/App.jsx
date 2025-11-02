@@ -1299,39 +1299,39 @@ const BeybladeTeamBuilder = () => {
             <div className="mt-8 flex justify-center gap-4 flex-wrap">
               <button
                 onClick={() => setShowLibrary(true)}
-                className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
+                className="min-w-[200px] px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-3"
               >
                 <BookOpen size={24} />
-                📚 I Miei Build ({savedBuilds.length})
+                <span className="text-center">📚 I Miei Build ({savedBuilds.length})</span>
               </button>
               <button
                 onClick={() => setShowDatabase(true)}
-                className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
+                className="min-w-[200px] px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-3"
               >
                 <Package size={24} />
-                🗃️ Gestione Database
+                <span className="text-center">🗃️ Gestione Database</span>
               </button>
               <button
                 onClick={() => setShowRatingModal(true)}
-                className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-xl font-bold text-lg hover:from-yellow-600 hover:to-amber-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
+                className="min-w-[200px] px-6 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-xl font-bold text-lg hover:from-yellow-600 hover:to-amber-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-3"
               >
                 <Star size={24} />
-                ⭐ Rating Database
+                <span className="text-center">⭐ Rating Database</span>
               </button>
               <button
                 onClick={() => setShowCollection(true)}
-                className="px-8 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl font-bold text-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3"
+                className="min-w-[200px] px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl font-bold text-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-3"
               >
                 <Archive size={24} />
-                📦 La Mia Collezione
+                <span className="text-center">📦 La Mia Collezione</span>
               </button>
               {adminModeEnabled && (
                 <button
                   onClick={() => setShowAdminMode(true)}
-                  className="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold text-lg hover:from-red-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center gap-3 animate-pulse"
+                  className="min-w-[200px] px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold text-lg hover:from-red-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-3 animate-pulse"
                 >
                   <Calculator size={24} />
-                  🔧 Admin Mode
+                  <span className="text-center">🔧 Admin Mode</span>
                 </button>
               )}
             </div>
