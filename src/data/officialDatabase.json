@@ -1,0 +1,663 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdate": "2025-11-02",
+    "totalProducts": 31,
+    "description": "Database ufficiale Beyblade X products - Novembre 2025",
+    "formats": ["UX Starter", "UX Booster", "UX Dual Pack", "BX Starter", "BX Booster", "BX Dual Pack", "Random Booster", "Battle Set", "CX Starter", "CX Random", "Vari formati", "BX", "Dual Pack"],
+    "tiers": ["S+", "S", "A", "B"]
+  },
+  "products": [
+    {
+      "id": "prod_001",
+      "name": "Wizard Rod 5-70DB (UX Booster)",
+      "blade": {
+        "name": "Wizard Rod",
+        "type": "Defense"
+      },
+      "ratchet": {
+        "name": "5-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "DB",
+        "type": "Defense"
+      },
+      "price": "25-30€",
+      "tier": "S+",
+      "format": "UX Booster",
+      "setName": null,
+      "releaseDate": "2025-01"
+    },
+    {
+      "id": "prod_002",
+      "name": "Wand Wizard 5-70DB (UX Starter)",
+      "blade": {
+        "name": "Wand Wizard",
+        "type": "Defense"
+      },
+      "ratchet": {
+        "name": "5-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "DB",
+        "type": "Defense"
+      },
+      "price": "18-25€",
+      "tier": "S+",
+      "format": "UX Starter",
+      "setName": null,
+      "releaseDate": "2025-01"
+    },
+    {
+      "id": "prod_003",
+      "name": "Buster Dran 1-60A (UX Starter)",
+      "blade": {
+        "name": "Buster Dran",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "1-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "A",
+        "type": "Attack"
+      },
+      "price": "18-22€",
+      "tier": "A",
+      "format": "UX Starter",
+      "setName": null,
+      "releaseDate": "2025-01"
+    },
+    {
+      "id": "prod_004",
+      "name": "Shadow Shinobi 1-80MN (UX Starter)",
+      "blade": {
+        "name": "Shadow Shinobi",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "1-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "MN",
+        "type": "Stamina"
+      },
+      "price": "18-22€",
+      "tier": "A",
+      "format": "UX Starter",
+      "setName": null,
+      "releaseDate": "2025-01"
+    },
+    {
+      "id": "prod_005",
+      "name": "Circle Ghost 0-80GB (in UX Dual Pack)",
+      "blade": {
+        "name": "Circle Ghost",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "0-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "GB",
+        "type": "Defense"
+      },
+      "price": "25-30€",
+      "tier": "A",
+      "format": "UX Dual Pack",
+      "setName": "UX Dual Pack",
+      "releaseDate": "2025-02"
+    },
+    {
+      "id": "prod_006",
+      "name": "Soar Phoenix 9-60GF (BX Starter)",
+      "blade": {
+        "name": "Soar Phoenix",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "9-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "GF",
+        "type": "Defense"
+      },
+      "price": "15-20€",
+      "tier": "S",
+      "format": "BX Starter",
+      "setName": null,
+      "releaseDate": "2025-03"
+    },
+    {
+      "id": "prod_007",
+      "name": "Soar Phoenix 5-80H (BX Booster)",
+      "blade": {
+        "name": "Soar Phoenix",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "5-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "H",
+        "type": "Balance"
+      },
+      "price": "15-18€",
+      "tier": "A",
+      "format": "BX Booster",
+      "setName": null,
+      "releaseDate": "2025-03"
+    },
+    {
+      "id": "prod_008",
+      "name": "Sword Dran 3-60F (BX Starter)",
+      "blade": {
+        "name": "Sword Dran",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "3-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "F",
+        "type": "Attack"
+      },
+      "price": "13-16€",
+      "tier": "A",
+      "format": "BX Starter",
+      "setName": null,
+      "releaseDate": "2025-03"
+    },
+    {
+      "id": "prod_009",
+      "name": "Sword Dran 3-80B (in BX Dual Pack)",
+      "blade": {
+        "name": "Sword Dran",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "3-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "B",
+        "type": "Defense"
+      },
+      "price": "20-25€",
+      "tier": "A",
+      "format": "BX Dual Pack",
+      "setName": "Sword Dran Dual Pack",
+      "releaseDate": "2025-04"
+    },
+    {
+      "id": "prod_010",
+      "name": "Dran Sword 3-80B (Random Booster)",
+      "blade": {
+        "name": "Dran Sword",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "3-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "B",
+        "type": "Defense"
+      },
+      "price": "15-20€",
+      "tier": "S",
+      "format": "Random Booster",
+      "setName": null,
+      "releaseDate": "2025-04"
+    },
+    {
+      "id": "prod_011",
+      "name": "Shark Edge 3-60LF (Random Booster)",
+      "blade": {
+        "name": "Shark Edge",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "3-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "LF",
+        "type": "Attack"
+      },
+      "price": "15-20€",
+      "tier": "S",
+      "format": "Random Booster",
+      "setName": null,
+      "releaseDate": "2025-04"
+    },
+    {
+      "id": "prod_012",
+      "name": "Shark Edge 4-80N (Random Booster)",
+      "blade": {
+        "name": "Shark Edge",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "4-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "N",
+        "type": "Stamina"
+      },
+      "price": "15-20€",
+      "tier": "A",
+      "format": "Random Booster",
+      "setName": null,
+      "releaseDate": "2025-04"
+    },
+    {
+      "id": "prod_013",
+      "name": "Knight Shield 4-60LF (Random Booster)",
+      "blade": {
+        "name": "Knight Shield",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "4-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "LF",
+        "type": "Attack"
+      },
+      "price": "15-20€",
+      "tier": "S",
+      "format": "Random Booster",
+      "setName": null,
+      "releaseDate": "2025-05"
+    },
+    {
+      "id": "prod_014",
+      "name": "Wizard Arrow 3-60T (Random Booster)",
+      "blade": {
+        "name": "Wizard Arrow",
+        "type": "Defense"
+      },
+      "ratchet": {
+        "name": "3-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "T",
+        "type": "Stamina"
+      },
+      "price": "15-20€",
+      "tier": "A",
+      "format": "Random Booster",
+      "setName": null,
+      "releaseDate": "2025-05"
+    },
+    {
+      "id": "prod_015",
+      "name": "Chain Scythe 4-60T (BX Starter)",
+      "blade": {
+        "name": "Chain Scythe",
+        "type": "Stamina"
+      },
+      "ratchet": {
+        "name": "4-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "T",
+        "type": "Stamina"
+      },
+      "price": "13-16€",
+      "tier": "A",
+      "format": "BX Starter",
+      "setName": null,
+      "releaseDate": "2025-06"
+    },
+    {
+      "id": "prod_016",
+      "name": "Chain Scythe 3-80B (BX Booster)",
+      "blade": {
+        "name": "Chain Scythe",
+        "type": "Stamina"
+      },
+      "ratchet": {
+        "name": "3-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "B",
+        "type": "Defense"
+      },
+      "price": "15-18€",
+      "tier": "A",
+      "format": "BX Booster",
+      "setName": null,
+      "releaseDate": "2025-06"
+    },
+    {
+      "id": "prod_017",
+      "name": "Hells Scythe 3-80B (BX varie)",
+      "blade": {
+        "name": "Hells Scythe",
+        "type": "Stamina"
+      },
+      "ratchet": {
+        "name": "3-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "B",
+        "type": "Defense"
+      },
+      "price": "15-20€",
+      "tier": "S+",
+      "format": "BX",
+      "setName": null,
+      "releaseDate": "2025-06"
+    },
+    {
+      "id": "prod_018",
+      "name": "Obsidian Shell 4-60D (BX Booster)",
+      "blade": {
+        "name": "Obsidian Shell",
+        "type": "Defense"
+      },
+      "ratchet": {
+        "name": "4-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "D",
+        "type": "Defense"
+      },
+      "price": "15-18€",
+      "tier": "B",
+      "format": "BX Booster",
+      "setName": null,
+      "releaseDate": "2025-07"
+    },
+    {
+      "id": "prod_019",
+      "name": "Shelter Drake 7-80GP (BX Starter)",
+      "blade": {
+        "name": "Shelter Drake",
+        "type": "Defense"
+      },
+      "ratchet": {
+        "name": "7-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "GP",
+        "type": "Stamina"
+      },
+      "price": "18-22€",
+      "tier": "B",
+      "format": "BX Starter",
+      "setName": null,
+      "releaseDate": "2025-07"
+    },
+    {
+      "id": "prod_020",
+      "name": "Dagger Dran 4-70Q (BX Booster)",
+      "blade": {
+        "name": "Dagger Dran",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "4-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "Q",
+        "type": "Attack"
+      },
+      "price": "15-18€",
+      "tier": "B",
+      "format": "BX Booster",
+      "setName": null,
+      "releaseDate": "2025-08"
+    },
+    {
+      "id": "prod_021",
+      "name": "Chain Fire 5-60HT (in BX Dual Pack)",
+      "blade": {
+        "name": "Chain Fire",
+        "type": "Stamina"
+      },
+      "ratchet": {
+        "name": "5-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "HT",
+        "type": "Stamina"
+      },
+      "price": "25-30€",
+      "tier": "B",
+      "format": "BX Dual Pack",
+      "setName": "Chain Fire Dual Pack",
+      "releaseDate": "2025-08"
+    },
+    {
+      "id": "prod_022",
+      "name": "Dagger Dran 4-60R (in Xtreme Battle Set)",
+      "blade": {
+        "name": "Dagger Dran",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "4-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "R",
+        "type": "Balance"
+      },
+      "price": "30-35€",
+      "tier": "A",
+      "format": "Battle Set",
+      "setName": "Xtreme Battle Set (include stadio)",
+      "releaseDate": "2025-09"
+    },
+    {
+      "id": "prod_023",
+      "name": "Tusk Mammoth 3-60T (in Xtreme Battle Set)",
+      "blade": {
+        "name": "Tusk Mammoth",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "3-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "T",
+        "type": "Stamina"
+      },
+      "price": "30-35€",
+      "tier": "B",
+      "format": "Battle Set",
+      "setName": "Xtreme Battle Set (include stadio)",
+      "releaseDate": "2025-09"
+    },
+    {
+      "id": "prod_024",
+      "name": "Beat Tyranno 4-70Q (Dual Pack)",
+      "blade": {
+        "name": "Beat Tyranno",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "4-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "Q",
+        "type": "Attack"
+      },
+      "price": "20-25€",
+      "tier": "B",
+      "format": "BX Dual Pack",
+      "setName": "Beat Tyranno + Knife Shinobi",
+      "releaseDate": "2025-09"
+    },
+    {
+      "id": "prod_025",
+      "name": "Knife Shinobi 4-80HN (Dual Pack)",
+      "blade": {
+        "name": "Knife Shinobi",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "4-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "HN",
+        "type": "Defense"
+      },
+      "price": "20-25€",
+      "tier": "B",
+      "format": "BX Dual Pack",
+      "setName": "Beat Tyranno + Knife Shinobi",
+      "releaseDate": "2025-09"
+    },
+    {
+      "id": "prod_026",
+      "name": "Tackle Goat 2-70N (Dual Pack)",
+      "blade": {
+        "name": "Tackle Goat",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "2-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "N",
+        "type": "Stamina"
+      },
+      "price": "20-25€",
+      "tier": "B",
+      "format": "BX Dual Pack",
+      "setName": "Tackle Goat + Gale Wyvern",
+      "releaseDate": "2025-10"
+    },
+    {
+      "id": "prod_027",
+      "name": "Gale Wyvern 3-60T (Dual Pack)",
+      "blade": {
+        "name": "Gale Wyvern",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "3-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "T",
+        "type": "Stamina"
+      },
+      "price": "20-25€",
+      "tier": "B",
+      "format": "BX Dual Pack",
+      "setName": "Tackle Goat + Gale Wyvern",
+      "releaseDate": "2025-10"
+    },
+    {
+      "id": "prod_028",
+      "name": "Dark Perseus B 6-80W (CX Starter)",
+      "blade": {
+        "name": "Dark Perseus B",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "6-80",
+        "type": "Defense"
+      },
+      "bit": {
+        "name": "W",
+        "type": "Stamina"
+      },
+      "price": "25-30€",
+      "tier": "A",
+      "format": "CX Starter",
+      "setName": null,
+      "releaseDate": "2025-10"
+    },
+    {
+      "id": "prod_029",
+      "name": "Reaper Fire T 4-70K (CX Starter)",
+      "blade": {
+        "name": "Reaper Fire T",
+        "type": "Stamina"
+      },
+      "ratchet": {
+        "name": "4-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "K",
+        "type": "Attack"
+      },
+      "price": "25-30€",
+      "tier": "B",
+      "format": "CX Starter",
+      "setName": null,
+      "releaseDate": "2025-10"
+    },
+    {
+      "id": "prod_030",
+      "name": "Fox Blush J 9-70GR (CX Random)",
+      "blade": {
+        "name": "Fox Blush J",
+        "type": "Balance"
+      },
+      "ratchet": {
+        "name": "9-70",
+        "type": "Stamina"
+      },
+      "bit": {
+        "name": "GR",
+        "type": "Balance"
+      },
+      "price": "20-25€",
+      "tier": "A",
+      "format": "CX Random",
+      "setName": null,
+      "releaseDate": "2025-11"
+    },
+    {
+      "id": "prod_031",
+      "name": "Sting Unicorn 4-60P",
+      "blade": {
+        "name": "Sting Unicorn",
+        "type": "Attack"
+      },
+      "ratchet": {
+        "name": "4-60",
+        "type": "Attack"
+      },
+      "bit": {
+        "name": "P",
+        "type": "Stamina"
+      },
+      "price": "15-20€",
+      "tier": "A",
+      "format": "Vari formati",
+      "setName": null,
+      "releaseDate": "2025-11"
+    }
+  ]
+}
