@@ -152,6 +152,101 @@ npm run build
 npm run preview
 ```
 
+## 📝 Come Aggiornare il Database
+
+Il database dei prodotti Beyblade X è facilmente aggiornabile supportando nuove uscite ufficiali e prodotti personalizzati.
+
+### 🔧 Metodo 1: Tramite interfaccia Admin (Consigliato)
+
+1. **Attiva Modalità Admin**:
+   - Premi `Ctrl+Shift+A` (Windows/Linux) o `Cmd+Shift+A` (Mac)
+   - Vedrai apparire il pulsante "🔧 Admin Mode" nel menu principale
+
+2. **Aggiungi Prodotti Personalizzati**:
+   - Clicca su "🗃️ Gestione Database"
+   - Compila il form con i dettagli del prodotto:
+     - **Blade**: Nome principale (es: Lightning Dragoon)
+     - **Ratchet**: Codice ratchet (es: 5-70)
+     - **Bit**: Codice bit (es: DB)
+     - **Prezzo**: Range prezzo (es: 25-30€)
+     - **Tier**: S+/S/A/B
+
+### 📄 Metodo 2: Manualmente (per nuove uscite ufficiali)
+
+1. **Apri il file database**:
+   ```bash
+   # Modifica il database ufficiale
+   src/data/officialDatabase.json
+   ```
+
+2. **Aggiungi il nuovo prodotto** seguendo questo schema:
+   ```json
+   {
+     "id": "prod_032",
+     "name": "Nome Prodotto Completo",
+     "blade": {
+       "name": "Nome Blade",
+       "type": "Attack|Defense|Stamina|Balance"
+     },
+     "ratchet": {
+       "name": "X-Y",
+       "type": "Attack|Defense|Stamina|Balance"
+     },
+     "bit": {
+       "name": "Codice Bit",
+       "type": "Attack|Defense|Stamina|Balance"
+     },
+     "price": "XX-YY€",
+     "tier": "S+|S|A|B",
+     "format": "UX Starter|Booster|BX|CX|Battle Set",
+     "setName": null,
+     "releaseDate": "YYYY-MM"
+   }
+   ```
+
+3. **Aggiorna i metadata** alla fine del file:
+   ```json
+   "metadata": {
+     "totalProducts": 32,
+     "lastUpdate": "2025-11-02",
+     "version": "3.0.1"
+   }
+   ```
+
+### 🎯 Tipologie Componenti
+
+Quando aggiungi un nuovo prodotto, specifica la tipologia corretta:
+
+- **Attack (Attacco)** 🔵: Componenti offensivi, veloci e leggeri
+- **Defense (Difesa)** 🟢: Componenti pesanti e stabili
+- **Stamina (Resistenza)** 🟠: Componenti per lunga durata
+- **Balance (Equilibrio)** 🔴: Componenti versatili
+
+⚠️ **Importante**: Le tipologie sono usate per:
+- Classificazione automatica Beyblade
+- Calcolo statistiche collezione
+- Suggerimenti ottimizzatore acquisti
+- Badge colorati nell'interfaccia
+
+### 📋 Checklist Aggiornamento
+
+✅ **Obbligatorio per ogni prodotto**:
+- `id`: Unico (formato: `prod_XXX`)
+- `name`: Nome completo commerciale
+- `blade`, `ratchet`, `bit`: Con nome e type
+- `price`: Range prezzo indicativo
+- `tier`: Classificazione competitiva
+
+✅ **Consigliato**:
+- `format`: Formato ufficiale Takara Tomy
+- `releaseDate`: Data uscita
+- Verifica tipologia componenti
+
+✅ **Validazione automatica**:
+- L'applicazione validerà il database all'avvio
+- Errori verranno mostrati nella console
+- Prodotti mal formatati verranno ignorati
+
 ## 🎮 Guida Rapida
 
 ### 🏆 **1. Team Builder**

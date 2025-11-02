@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { ShoppingCart, TrendingDown, CheckCircle, XCircle, AlertCircle, Package, DollarSign, Zap, Target, Calculator } from 'lucide-react';
 import { CollectionManager, DatabaseUtils } from '../utils/databaseManager.js';
+import { getComponentType, getTypeColor, getTypeBgColor } from '../data/beybladeTypes.js';
 
 /**
  * Algoritmo di ottimizzazione avanzato per acquisti Beyblade X
@@ -288,8 +289,8 @@ const ShoppingOptimizer = ({ team, onClose }) => {
       let savings = { amount: 0, percentage: 0 };
 
       if (totalMissing > 0) {
-        optimalSolution = engine.optimizeProductSelection(missingComponents, availableProducts);
-        alternatives = engine.calculateAlternatives(missingComponents, availableProducts, optimalSolution);
+        optimalSolution = engine.optimizeProductSelection(missing, availableProducts);
+        alternatives = engine.calculateAlternatives(missing, availableProducts, optimalSolution);
 
         const optimalCost = engine.calculateTotalCost(optimalSolution);
         savings = engine.calculateSavings(optimalCost, alternatives);

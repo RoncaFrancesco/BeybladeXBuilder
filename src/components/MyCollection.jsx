@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Package, Search, Filter, Check, X, Star, TrendingUp, Calendar, Download, Upload, Trash2 } from 'lucide-react';
+import { Package, Search, Filter, Check, X, Star, TrendingUp, Calendar, Download, Upload, Trash2, Plus, AlertCircle } from 'lucide-react';
 import { CollectionManager, DatabaseUtils, OfficialDatabaseManager } from '../utils/databaseManager.js';
+import { getComponentType, getTypeColor, getTypeBgColor } from '../data/beybladeTypes.js';
 
 // Icone tipologie Beyblade (stesse da App.js per consistenza)
 const TypeIcons = {
@@ -51,141 +52,175 @@ const TypeIcon = ({ type, size = 16 }) => {
 };
 
 const MyCollection = ({ onClose }) => {
-  const [products, setProducts] = useState([]);
-  const [stats, setStats] = useState(null);
+  // STATO COMPONENTE NUOVO
+  const [ownedProducts, setOwnedProducts] = useState([]);     // Solo prodotti posseduti
+  const [allProducts, setAllProducts] = useState([]);         // Database completo (per ricerca)
+  const [searchQuery, setSearchQuery] = useState('');         // Query ricerca
+  const [searchResults, setSearchResults] = useState([]);     // Risultati ricerca
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState(null);
   const [filters, setFilters] = useState({
     tier: '',
     format: '',
-    source: '',
-    owned: ''
+    sortBy: 'date'
   });
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState(new Set());
-  const [bulkAction, setBulkAction] = useState('');
 
-  // Carica dati iniziali
+  // Caricamento dati iniziali
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Carica database completo per ricerca
+        const allProds = await DatabaseUtils.getAllProducts();
+        setAllProducts(allProds);
+
+        // Carica SOLO prodotti posseduti per visualizzazione
+        const owned = await CollectionManager.getOwnedProducts();
+        setOwnedProducts(owned);
+
+      } catch (error) {
+        console.error('Errore caricamento collezione:', error);
+        showToast('❌ Errore nel caricamento della collezione', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [allProducts, collectionStats] = await Promise.all([
-        DatabaseUtils.getAllProducts(),
-        CollectionManager.getStats()
-      ]);
-      setProducts(allProducts);
-      setStats(collectionStats);
-    } catch (error) {
-      console.error('Errore caricamento dati collezione:', error);
-    } finally {
-      setLoading(false);
+  // LOGICA RICERCA (Mostra solo se searchQuery non vuoto)
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
     }
-  };
 
-  // Filtra prodotti in base a ricerca e filtri
-  const filteredProducts = useMemo(() => {
-    let filtered = [...products];
-
-    // Ricerca testuale
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
+    const query = searchQuery.toLowerCase();
+    const results = allProducts.filter(product =>
+      !ownedProducts.find(p => p.id === product.id) && // Escludi già posseduti
+      (
         product.name.toLowerCase().includes(query) ||
         product.blade?.name.toLowerCase().includes(query) ||
         product.ratchet?.name.toLowerCase().includes(query) ||
         product.bit?.name.toLowerCase().includes(query)
-      );
-    }
+      )
+    );
 
-    // Filtri
+    setSearchResults(results.slice(0, 10)); // Max 10 risultati
+  }, [searchQuery, allProducts, ownedProducts]);
+
+  // Calcola statistiche
+  const stats = useMemo(() => {
+    const totalProducts = ownedProducts.length;
+
+    // Conta pezzi unici
+    const uniquePieces = new Set([
+      ...ownedProducts.map(p => p.blade?.name),
+      ...ownedProducts.map(p => p.ratchet?.name),
+      ...ownedProducts.map(p => p.bit?.name)
+    ].filter(Boolean));
+
+    return {
+      totalProducts,
+      totalPieces: uniquePieces.size,
+      byTier: ownedProducts.reduce((acc, p) => {
+        acc[p.tier] = (acc[p.tier] || 0) + 1;
+        return acc;
+      }, {}),
+      byFormat: ownedProducts.reduce((acc, p) => {
+        acc[p.format] = (acc[p.format] || 0) + 1;
+        return acc;
+      }, {})
+    };
+  }, [ownedProducts]);
+
+  // Prodotti filtrati per visualizzazione
+  const filteredOwnedProducts = useMemo(() => {
+    let filtered = [...ownedProducts];
+
+    // Filtra per tier
     if (filters.tier) {
       filtered = filtered.filter(p => p.tier === filters.tier);
     }
+
+    // Filtra per formato
     if (filters.format) {
       filtered = filtered.filter(p => p.format === filters.format);
     }
-    if (filters.source) {
-      filtered = filtered.filter(p => p.source === filters.source);
-    }
-    if (filters.owned !== '') {
-      const isOwned = filters.owned === 'true';
-      filtered = filtered.filter(p => p.owned === isOwned);
+
+    // Ordinamento
+    switch (filters.sortBy) {
+      case 'name':
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'tier':
+        const tierOrder = { 'S+': 1, 'S': 2, 'A': 3, 'B': 4 };
+        filtered.sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier]);
+        break;
+      case 'price':
+        filtered.sort((a, b) => {
+          const priceA = parseInt(a.price?.match(/\d+/)?.[0] || 0);
+          const priceB = parseInt(b.price?.match(/\d+/)?.[0] || 0);
+          return priceA - priceB;
+        });
+        break;
+      case 'date':
+      default:
+        filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        break;
     }
 
     return filtered;
-  }, [products, searchQuery, filters]);
+  }, [ownedProducts, filters]);
 
-  // Toggle possesso prodotto
-  const toggleProductOwnership = async (productId) => {
+  // Opzioni uniche per filtri
+  const uniqueTiers = useMemo(() =>
+    [...new Set(ownedProducts.map(p => p.tier))].sort((a, b) => {
+      const order = { 'S+': 1, 'S': 2, 'A': 3, 'B': 4 };
+      return order[a] - order[b];
+    }),
+    [ownedProducts]
+  );
+
+  const uniqueFormats = useMemo(() =>
+    [...new Set(ownedProducts.map(p => p.format))].sort(),
+    [ownedProducts]
+  );
+
+  // FUNZIONI CRUD
+  const addToCollection = async (product) => {
     try {
-      if (products.find(p => p.id === productId)?.owned) {
-        await CollectionManager.removeProduct(productId);
-      } else {
-        await CollectionManager.addProduct(productId);
-      }
-      await loadData(); // Reload data
+      await CollectionManager.addProduct(product.id);
+
+      // Aggiunge timestamp per ordinamento
+      const productWithTimestamp = { ...product, timestamp: Date.now() };
+      setOwnedProducts([...ownedProducts, productWithTimestamp]);
+
+      setSearchQuery(''); // Pulisci ricerca
+      showToast(`✅ ${product.name} aggiunto alla collezione!`, 'success');
     } catch (error) {
-      console.error('Errore aggiornamento possesso prodotto:', error);
+      console.error('Errore aggiunta prodotto:', error);
+      showToast('❌ Errore aggiunta prodotto', 'error');
     }
   };
 
-  // Toggle selezione per azioni bulk
-  const toggleProductSelection = (productId) => {
-    const newSelection = new Set(selectedProducts);
-    if (newSelection.has(productId)) {
-      newSelection.delete(productId);
-    } else {
-      newSelection.add(productId);
-    }
-    setSelectedProducts(newSelection);
-  };
-
-  // Toggle selezione tutti
-  const toggleSelectAll = () => {
-    if (selectedProducts.size === filteredProducts.length) {
-      setSelectedProducts(new Set());
-    } else {
-      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
-    }
-  };
-
-  // Azione bulk
-  const executeBulkAction = async () => {
-    if (!bulkAction || selectedProducts.size === 0) return;
-
+  const removeFromCollection = async (productId) => {
     try {
-      if (bulkAction === 'add') {
-        for (const productId of selectedProducts) {
-          await CollectionManager.addProduct(productId);
-        }
-      } else if (bulkAction === 'remove') {
-        for (const productId of selectedProducts) {
-          await CollectionManager.removeProduct(productId);
-        }
-      }
-
-      setSelectedProducts(new Set());
-      setBulkAction('');
-      await loadData();
+      await CollectionManager.removeProduct(productId);
+      setOwnedProducts(ownedProducts.filter(p => p.id !== productId));
+      showToast('✅ Prodotto rimosso dalla collezione', 'success');
     } catch (error) {
-      console.error('Errore azione bulk:', error);
+      console.error('Errore rimozione prodotto:', error);
+      showToast('❌ Errore rimozione prodotto', 'error');
     }
   };
 
-  // Export collezione
   const exportCollection = async () => {
     try {
-      const ownedProducts = await CollectionManager.getOwnedProducts();
-      const dataStr = JSON.stringify({
-        collection: ownedProducts,
-        stats,
-        exportDate: new Date().toISOString()
-      }, null, 2);
-
+      const collection = await CollectionManager.exportCollection();
+      const dataStr = JSON.stringify(collection, null, 2);
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement('a');
@@ -193,44 +228,59 @@ const MyCollection = ({ onClose }) => {
       link.download = `beyblade-collection-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
+      showToast('📦 Collezione esportata con successo!', 'success');
     } catch (error) {
-      console.error('Errore export collezione:', error);
+      console.error('Errore esportazione:', error);
+      showToast('❌ Errore esportazione collezione', 'error');
     }
   };
 
-  // Get tier color
-  const getTierColor = (tier) => {
-    const colors = {
-      'S+': 'text-red-600 font-bold bg-red-50 border-red-200',
-      'S': 'text-orange-600 font-bold bg-orange-50 border-orange-200',
-      'A': 'text-yellow-600 font-semibold bg-yellow-50 border-yellow-200',
-      'B': 'text-green-600 bg-green-50 border-green-200'
-    };
-    return colors[tier] || 'text-gray-600 bg-gray-50 border-gray-200';
+  const importCollection = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importedData = JSON.parse(text);
+
+      await CollectionManager.importCollection(importedData);
+
+      // Ricarica i dati
+      const owned = await CollectionManager.getOwnedProducts();
+      setOwnedProducts(owned);
+
+      showToast('📦 Collezione importata con successo!', 'success');
+    } catch (error) {
+      console.error('Errore importazione:', error);
+      showToast('❌ Errore importazione collezione', 'error');
+    }
+
+    // Reset input file
+    event.target.value = '';
   };
 
-  // Opzioni filtri
-  const uniqueTiers = useMemo(() => [...new Set(products.map(p => p.tier))].sort(), [products]);
-  const uniqueFormats = useMemo(() => [...new Set(products.map(p => p.format))].sort(), [products]);
+  // Toast notifications
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent mx-auto mb-4"></div>
-            <p className="text-gray-600">Caricamento collezione...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Helper per colore tier
+  const getTierColor = (tier) => {
+    const colors = {
+      'S+': 'text-red-600 font-bold',
+      'S': 'text-orange-600 font-bold',
+      'A': 'text-yellow-600 font-semibold',
+      'B': 'text-green-600'
+    };
+    return colors[tier] || 'text-gray-600';
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-500">
+        <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-teal-500 to-cyan-500">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
             <Package size={28} />
             📦 La Mia Collezione
@@ -243,290 +293,274 @@ const MyCollection = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Stats Bar */}
-        {stats && (
-          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.owned}</div>
-                <div className="text-sm text-gray-600">Prodotti Posseduti</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-                <div className="text-sm text-gray-600">Prodotti Totali</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{stats.percentage}%</div>
-                <div className="text-sm text-gray-600">Completamento</div>
-              </div>
-              <div className="text-center">
-                <button
-                  onClick={exportCollection}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1 mx-auto"
-                  title="Esporta collezione"
-                >
-                  <Download size={16} />
-                  Export
-                </button>
-              </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-600">Caricamento collezione...</p>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-6">
+              {/* STATISTICHE */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-4 border-2 border-teal-300">
+                  <div className="flex items-center gap-2 text-teal-700">
+                    <Package size={20} />
+                    <span className="font-bold">{stats.totalProducts}</span>
+                  </div>
+                  <div className="text-sm text-teal-600">Prodotti Posseduti</div>
+                </div>
 
-        {/* Search and Filters */}
-        <div className="p-4 border-b bg-gray-50">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-300">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Star size={20} />
+                    <span className="font-bold">{stats.totalPieces}</span>
+                  </div>
+                  <div className="text-sm text-blue-600">Pezzi Unici</div>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-300">
+                  <div className="text-sm text-purple-600">Tier più alto</div>
+                  <div className="font-bold text-purple-700">
+                    {stats.byTier['S+'] > 0 ? 'S+' : stats.byTier['S'] > 0 ? 'S' : stats.byTier['A'] > 0 ? 'A' : 'B'}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={exportCollection}
+                    className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-1"
+                    title="Esporta collezione"
+                  >
+                    <Download size={16} />
+                    Export
+                  </button>
+
+                  <label className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors cursor-pointer flex items-center justify-center gap-1">
+                    <Upload size={16} />
+                    Import
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={importCollection}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* SEARCH BAR */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <Search size={20} />
+                </div>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cerca per nome, blade, ratchet o bit..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="🔍 Cerca prodotto da aggiungere alla collezione..."
+                  className="w-full pl-10 pr-4 py-3 border-2 border-teal-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-lg"
                 />
               </div>
-            </div>
 
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                showFilters
-                  ? 'bg-green-500 text-white'
-                  : 'bg-white border hover:bg-gray-50'
-              }`}
-            >
-              <Filter size={16} />
-              Filtri
-              {(filters.tier || filters.format || filters.source || filters.owned !== '') && (
-                <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold">
-                  {Object.values(filters).filter(v => v !== '').length}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Filters Panel */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-white rounded-lg border">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <select
-                  value={filters.tier}
-                  onChange={(e) => setFilters({ ...filters, tier: e.target.value })}
-                  className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Tutti i Tier</option>
-                  {uniqueTiers.map(tier => (
-                    <option key={tier} value={tier}>{tier}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.format}
-                  onChange={(e) => setFilters({ ...filters, format: e.target.value })}
-                  className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Tutti i Formati</option>
-                  {uniqueFormats.map(format => (
-                    <option key={format} value={format}>{format}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.source}
-                  onChange={(e) => setFilters({ ...filters, source: e.target.value })}
-                  className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Tutte le Fonti</option>
-                  <option value="official">Ufficiali</option>
-                  <option value="custom">Personalizzati</option>
-                </select>
-
-                <select
-                  value={filters.owned}
-                  onChange={(e) => setFilters({ ...filters, owned: e.target.value })}
-                  className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Tutti</option>
-                  <option value="true">Posseduti</option>
-                  <option value="false">Non Posseduti</option>
-                </select>
-
-                <button
-                  onClick={() => setFilters({ tier: '', format: '', source: '', owned: '' })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bulk Actions */}
-        {selectedProducts.size > 0 && (
-          <div className="p-4 bg-blue-50 border-b">
-            <div className="flex items-center justify-between">
-              <span className="text-blue-800 font-medium">
-                {selectedProducts.size} prodotti selezionati
-              </span>
-              <div className="flex items-center gap-2">
-                <select
-                  value={bulkAction}
-                  onChange={(e) => setBulkAction(e.target.value)}
-                  className="px-3 py-1 border rounded focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Azioni bulk...</option>
-                  <option value="add">Aggiungi alla collezione</option>
-                  <option value="remove">Rimuovi dalla collezione</option>
-                </select>
-                <button
-                  onClick={executeBulkAction}
-                  disabled={!bulkAction}
-                  className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  Esegui
-                </button>
-                <button
-                  onClick={() => setSelectedProducts(new Set())}
-                  className="px-4 py-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                >
-                  Annulla selezione
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={selectedProducts.size === filteredProducts.length && filteredProducts.length > 0}
-                onChange={toggleSelectAll}
-                className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-              />
-              <span className="text-sm text-gray-600">
-                Seleziona tutti ({filteredProducts.length} prodotti)
-              </span>
-            </div>
-            <div className="text-sm text-gray-500">
-              {filteredProducts.filter(p => p.owned).length} posseduti su {filteredProducts.length} visualizzati
-            </div>
-          </div>
-
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="mx-auto mb-4 text-gray-400" size={48} />
-              <p className="text-gray-600 text-lg">Nessun prodotto trovato</p>
-              <p className="text-gray-500 text-sm mt-2">
-                {searchQuery || filters.tier || filters.format || filters.source || filters.owned !== ''
-                  ? 'Prova a modificare i filtri di ricerca'
-                  : 'Il database potrebbe essere vuoto'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className={`relative border-2 rounded-xl p-4 transition-all duration-200 ${
-                    product.owned
-                      ? 'bg-green-50 border-green-300 shadow-md'
-                      : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  {/* Owned Badge */}
-                  {product.owned && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <Check size={12} />
-                      POSSEDUTO
+              {/* RISULTATI RICERCA (solo se searchQuery non vuoto) */}
+              {searchQuery.trim().length >= 2 && (
+                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
+                  {searchResults.length > 0 ? (
+                    <div>
+                      <h3 className="font-bold text-yellow-900 mb-3 flex items-center gap-2">
+                        <Search size={18} />
+                        📋 {searchResults.length} prodotti trovati:
+                      </h3>
+                      <div className="space-y-2">
+                        {searchResults.map(product => (
+                          <div key={product.id} className="bg-white rounded-lg p-3 border border-yellow-200 flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-gray-800">{product.name}</div>
+                              <div className="text-sm text-gray-600">
+                                {product.blade?.name} • {product.ratchet?.name} • {product.bit?.name}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getTierColor(product.tier)}`}>
+                                  Tier {product.tier}
+                                </span>
+                                <span className="text-xs text-gray-500">{product.format}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => addToCollection(product)}
+                              className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-semibold flex items-center gap-1"
+                            >
+                              <Plus size={16} />
+                              Aggiungi
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <AlertCircle className="mx-auto mb-2 text-yellow-600" size={32} />
+                      <p className="text-yellow-800 font-semibold">
+                        ❌ Nessun prodotto trovato per "{searchQuery}"
+                      </p>
+                      <p className="text-yellow-700 text-sm mt-1">
+                        Prova con nomi diversi o controlla l'ortografia
+                      </p>
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Selection Checkbox */}
-                  <div className="absolute top-2 left-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedProducts.has(product.id)}
-                      onChange={() => toggleProductSelection(product.id)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                    />
+              {/* FILTRI (solo se ci sono prodotti posseduti) */}
+              {ownedProducts.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={filters.tier}
+                    onChange={(e) => setFilters({ ...filters, tier: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    <option value="">Tutti i Tier</option>
+                    {uniqueTiers.map(tier => (
+                      <option key={tier} value={tier}>Tier {tier}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.format}
+                    onChange={(e) => setFilters({ ...filters, format: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    <option value="">Tutti i Formati</option>
+                    {uniqueFormats.map(format => (
+                      <option key={format} value={format}>{format}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.sortBy}
+                    onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  >
+                    <option value="date">Ordinamento: Recente</option>
+                    <option value="name">Ordinamento: Nome</option>
+                    <option value="tier">Ordinamento: Tier</option>
+                    <option value="price">Ordinamento: Prezzo</option>
+                  </select>
+                </div>
+              )}
+
+              {/* LISTA PRODOTTI POSSEDUTI */}
+              <div>
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Package size={20} />
+                  📋 I MIEI PRODOTTI POSSEDUTI:
+                </h3>
+
+                {filteredOwnedProducts.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                    <Package className="mx-auto mb-4 text-gray-400" size={48} />
+                    <h4 className="text-xl font-semibold text-gray-700 mb-2">
+                      Collezione Vuota
+                    </h4>
+                    <p className="text-gray-600 mb-4">
+                      Usa la ricerca sopra per aggiungere prodotti alla tua collezione
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                      <p className="text-blue-800 text-sm">
+                        💡 <strong>Suggerimento:</strong> Digita il nome di un prodotto (es: "Wizard Rod")
+                        e clicca su "Aggiungi" per iniziare a costruire la tua collezione!
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {filteredOwnedProducts.map(product => (
+                      <div key={product.id} className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-5 border-2 border-teal-300 shadow-md hover:shadow-lg transition-shadow">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h4 className="text-xl font-bold text-teal-900 mb-2">{product.name}</h4>
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className={`px-2 py-1 rounded-full border ${getTierColor(product.tier)}`}>
+                                Tier {product.tier}
+                              </span>
+                              <span className="text-gray-600">{product.format}</span>
+                              {product.price && (
+                                <span className="text-gray-700 font-medium">{product.price}</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFromCollection(product.id)}
+                            className="ml-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            title="Rimuovi dalla collezione"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
 
-                  {/* Product Info */}
-                  <div className="pt-6">
-                    <h3 className="font-bold text-lg mb-2 pr-16">{product.name}</h3>
+                        {/* Components */}
+                        <div className="space-y-2 text-sm mb-3">
+                          <div className="flex items-center gap-2">
+                            {product.blade?.name && (
+                              <>
+                                <TypeIcon type={getComponentType('blade', product.blade.name)} />
+                                <span className="font-semibold">{product.blade.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeBgColor(getComponentType('blade', product.blade.name))} ${getTypeColor(getComponentType('blade', product.blade.name))}`}>
+                                  {getComponentType('blade', product.blade.name)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {product.ratchet?.name && (
+                              <>
+                                <TypeIcon type={getComponentType('ratchet', product.ratchet.name)} />
+                                <span>{product.ratchet.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeBgColor(getComponentType('ratchet', product.ratchet.name))} ${getTypeColor(getComponentType('ratchet', product.ratchet.name))}`}>
+                                  {getComponentType('ratchet', product.ratchet.name)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {product.bit?.name && (
+                              <>
+                                <TypeIcon type={getComponentType('bit', product.bit.name)} />
+                                <span>{product.bit.name}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeBgColor(getComponentType('bit', product.bit.name))} ${getTypeColor(getComponentType('bit', product.bit.name))}`}>
+                                  {getComponentType('bit', product.bit.name)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
 
-                    {/* Components */}
-                    <div className="space-y-1 mb-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <TypeIcon type={product.blade?.type} />
-                        <span className="font-semibold">{product.blade?.name}</span>
-                        {product.blade?.type && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            product.blade.type === 'Attack' ? 'bg-blue-100 text-blue-700' :
-                            product.blade.type === 'Defense' ? 'bg-green-100 text-green-700' :
-                            product.blade.type === 'Stamina' ? 'bg-orange-100 text-orange-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {product.blade.type}
-                          </span>
+                        {/* Metadata */}
+                        {product.addedDate && (
+                          <div className="text-xs text-gray-500 border-t pt-2">
+                            Aggiunto il: {new Date(product.addedDate).toLocaleDateString('it-IT')}
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <TypeIcon type={product.ratchet?.type} />
-                        <span>{product.ratchet?.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TypeIcon type={product.bit?.type} />
-                        <span>{product.bit?.name}</span>
-                      </div>
-                    </div>
-
-                    {/* Metadata */}
-                    <div className="flex items-center justify-between text-xs mb-3">
-                      <span className={`px-2 py-1 rounded-full border ${getTierColor(product.tier)}`}>
-                        Tier {product.tier}
-                      </span>
-                      <span className="text-gray-500">{product.format}</span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="text-lg font-bold text-green-600 mb-3">
-                      {product.price}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => toggleProductOwnership(product.id)}
-                        className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
-                          product.owned
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-green-500 text-white hover:bg-green-600'
-                        }`}
-                      >
-                        {product.owned ? 'Rimuovi' : 'Aggiungi'}
-                      </button>
-                      {product.source === 'custom' && (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                          Custom
-                        </span>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                )}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Toast Notifications */}
+        {toast && (
+          <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse ${
+            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+          } text-white font-medium flex items-center gap-2`}>
+            {toast.type === 'success' ? <Check size={20} /> : <AlertCircle size={20} />}
+            {toast.message}
+          </div>
+        )}
       </div>
     </div>
   );
