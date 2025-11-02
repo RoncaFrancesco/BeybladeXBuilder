@@ -1155,6 +1155,9 @@ const BeybladeTeamBuilder = () => {
             currentView={currentMobileView}
             setCurrentView={(view) => {
               setCurrentMobileView(view);
+              // Chiudi sempre il menu mobile quando si naviga
+              setShowMobileMenu(false);
+
               if (view === 'library') setShowLibrary(true);
               else if (view === 'collection') setShowCollection(true);
               else if (view === 'statistics') setShowStatistics(true);
