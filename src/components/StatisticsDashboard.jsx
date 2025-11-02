@@ -156,8 +156,9 @@ const StatisticsDashboard = ({ setCurrentView }) => {
   }
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 z-50 overflow-y-auto">
-      <div className="max-w-7xl mx-auto">
+    <div className="statistics-backdrop">
+      <div className="statistics-dashboard min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
         {/* Header con back button */}
         <div className="flex items-center justify-between mb-8">
           <button
@@ -387,6 +388,7 @@ const StatisticsDashboard = ({ setCurrentView }) => {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
