@@ -107,6 +107,7 @@ const BeybladeTeamBuilder = () => {
 
   // Mobile states
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [currentMobileView, setCurrentMobileView] = useState('menu');
 
   // Stati dati
   const [savedBuilds, setSavedBuilds] = useState([]);
@@ -1151,8 +1152,9 @@ const BeybladeTeamBuilder = () => {
           <MobileMenu
             isOpen={showMobileMenu}
             onClose={() => setShowMobileMenu(false)}
-            currentView={mode}
+            currentView={currentMobileView}
             setCurrentView={(view) => {
+              setCurrentMobileView(view);
               if (view === 'library') setShowLibrary(true);
               else if (view === 'collection') setShowCollection(true);
               else if (view === 'statistics') setShowStatistics(true);
