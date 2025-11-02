@@ -1,10 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AlertCircle, Check, ShoppingCart, Trash2, Package, Save, BookOpen, Upload, X, Star, Star as StarEmpty, Archive, Calculator, FileSpreadsheet, Download } from 'lucide-react';
+import { AlertCircle, Check, ShoppingCart, Trash2, Package, Save, BookOpen, Upload, X, Star, Star as StarEmpty, Archive, Calculator, FileSpreadsheet, Download, BarChart3, Menu } from 'lucide-react';
 
 // Import dei nuovi sistemi
 import { DatabaseUtils, OfficialDatabaseManager, CollectionManager } from './utils/databaseManager.js';
 import MyCollection from './components/MyCollection.jsx';
 import ShoppingOptimizer from './components/ShoppingOptimizer.jsx';
+import StatisticsDashboard from './components/StatisticsDashboard.jsx';
+
+// Mobile components e hooks
+import { useMobileDetection } from './hooks/useMobileDetection';
+import { usePerformanceOptimization } from './hooks/usePerformanceOptimization';
+import MobileMenu from './components/MobileMenu.jsx';
 import { useOwnedComponents } from './hooks/useUnifiedDatabase.js';
 import { beybladeTypes, getComponentType, getTypeColor, getTypeBgColor } from './data/beybladeTypes.js';
 import Papa from 'papaparse';
@@ -96,7 +102,11 @@ const BeybladeTeamBuilder = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showCollection, setShowCollection] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showStatistics, setShowStatistics] = useState(false);
   const [showAdminMode, setShowAdminMode] = useState(false);
+
+  // Mobile states
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Stati dati
   const [savedBuilds, setSavedBuilds] = useState([]);
@@ -109,6 +119,10 @@ const BeybladeTeamBuilder = () => {
 
   // Hook per componenti posseduti (sistema unificato)
   const { ownedComponents, checkOwnership, loading: ownedLoading } = useOwnedComponents();
+
+  // Mobile hooks
+  const { isMobile, isTablet, screenSize, orientation } = useMobileDetection();
+  const { isLowPerformance, debounce } = usePerformanceOptimization();
   const [toast, setToast] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [adminModeEnabled, setAdminModeEnabled] = useState(false);
@@ -1132,6 +1146,36 @@ const BeybladeTeamBuilder = () => {
           />
         )}
 
+        {/* Mobile Menu */}
+        {showMobileMenu && (
+          <MobileMenu
+            isOpen={showMobileMenu}
+            onClose={() => setShowMobileMenu(false)}
+            currentView={mode}
+            setCurrentView={(view) => {
+              if (view === 'library') setShowLibrary(true);
+              else if (view === 'collection') setShowCollection(true);
+              else if (view === 'statistics') setShowStatistics(true);
+              else if (view === 'database') setShowDatabase(true);
+              else if (view === 'rating') setShowRatingModal(true);
+              else if (view === 'menu') {
+                setMode(null);
+              }
+            }}
+            savedBuildsCount={savedBuilds.length}
+          />
+        )}
+
+        {/* StatisticsDashboard Modal */}
+        {showStatistics && (
+          <StatisticsDashboard
+            setCurrentView={(view) => {
+              setShowStatistics(false);
+              if (view === 'collection') setShowCollection(true);
+            }}
+          />
+        )}
+
         {/* Libreria Build Salvati */}
         {showLibrary && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1689,8 +1733,23 @@ const BeybladeTeamBuilder = () => {
               </button>
             </div>
 
-            <div className="mt-8 max-w-5xl mx-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mt-8 max-w-6xl mx-auto">
+              {/* Mobile Menu Button */}
+              {isMobile && (
+                <div className="fixed top-4 right-4 z-30">
+                  <button
+                    onClick={() => setShowMobileMenu(true)}
+                    className="p-3 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors active:scale-95"
+                    aria-label="Apri menu"
+                  >
+                    <Menu className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+
+              {/* Desktop Menu - Solo per schermi grandi */}
+              {!isMobile && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <button
                   onClick={() => setShowLibrary(true)}
                   className="w-full min-h-[100px] px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex flex-col items-center justify-center gap-2"
@@ -1723,6 +1782,14 @@ const BeybladeTeamBuilder = () => {
                   <span className="text-center">📦 La Mia</span>
                   <span className="text-sm opacity-90">Collezione</span>
                 </button>
+                <button
+                  onClick={() => setShowStatistics(true)}
+                  className="w-full min-h-[100px] px-6 py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-bold text-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105 shadow-xl flex flex-col items-center justify-center gap-2"
+                >
+                  <BarChart3 size={28} />
+                  <span className="text-center">📊</span>
+                  <span className="text-sm opacity-90">Statistiche</span>
+                </button>
                 {adminModeEnabled && (
                   <button
                     onClick={() => setShowAdminMode(true)}
@@ -1734,6 +1801,7 @@ const BeybladeTeamBuilder = () => {
                   </button>
                 )}
               </div>
+              )} {/* Fine desktop menu */}
             </div>
 
               {/* Pulsanti CSV in Admin Mode */}

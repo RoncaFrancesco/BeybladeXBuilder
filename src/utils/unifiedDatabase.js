@@ -444,9 +444,9 @@ class UnifiedDatabaseSystem {
    */
   async loadCustomProducts() {
     try {
-      // Usa CollectionManager per caricare prodotti custom
-      const customData = await CollectionManager.getCustomProducts();
-      return Array.isArray(customData) ? customData : [];
+      // Per ora non ci sono prodotti custom, restituisce array vuoto
+      // In futuro implementare gestione prodotti personalizzati
+      return [];
     } catch (error) {
       console.error('Errore caricamento prodotti personalizzati:', error);
       return [];
