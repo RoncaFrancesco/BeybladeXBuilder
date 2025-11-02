@@ -19,7 +19,8 @@
       "Bash(\"C:\\Users\\franc\\Documents\\beyblade-builder\\README.md\")",
       "Bash(tree:*)",
       "Bash(git rm:*)",
-      "Bash(wmic:*)"
+      "Bash(wmic:*)",
+      "Bash(vercel:*)"
     ],
     "deny": [],
     "ask": []
